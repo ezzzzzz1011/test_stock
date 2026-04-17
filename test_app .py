@@ -467,7 +467,8 @@ elif st.session_state.page == "stock_query":
     with main_col:
         stock_code = st.text_input("請輸入台股代碼 (例如: 2330)", value="")
         current_price = 0.0
-        if stock_code:
+
+    if stock_code:
             info = get_stock_info(stock_code)
             if info:
                 current_price = info['price']
@@ -486,63 +487,62 @@ elif st.session_state.page == "stock_query":
             
             st.divider()
 
-        st.divider()
+            # ======= ✨ 新增：分頁功能開始 =======
+            tab1, tab2 = st.tabs(["📝 基本面估價", "📊 籌碼 K 線圖"])
 
-                # ======= ✨ 新增：分頁功能開始 =======
-                tab1, tab2 = st.tabs(["📝 基本面估價", "📊 籌碼 K 線圖"])
+            # --- 分頁 1：原本的合理價試算 ---
+            with tab1:
+                col_eps, col_pe = st.columns(2)
+                with col_eps: eps = st.number_input("輸入該股 EPS (4季累積)", min_value=0.01, step=0.1, value=10.0)
+                with col_pe: pe_target = st.number_input("自訂參考本益比 (PE)", value=15.0, step=0.1)
+                
+                if current_price > 0:
+                    fair_price = eps * pe_target
+                    st.subheader("📊 換算結果")
+                    st.markdown(f"<div class='calc-box'>合理價參考：<span class='highlight-val'>{fair_price:.2f}</span></div>", unsafe_allow_html=True)
+                    if current_price <= fair_price: 
+                        st.success(f"✅ 目前股價 {current_price:.2f} 低於目標參考價")
+                    else: 
+                        st.warning(f"⚠️ 目前股價 {current_price:.2f} 已超過目標參考價")
 
-                # --- 分頁 1：原本的合理價試算 ---
-                with tab1:
-                    col_eps, col_pe = st.columns(2)
-                    with col_eps: eps = st.number_input("輸入該股 EPS (4季累積)", min_value=0.01, step=0.1, value=10.0)
-                    with col_pe: pe_target = st.number_input("自訂參考本益比 (PE)", value=15.0, step=0.1)
-                    
-                    if current_price > 0:
-                        fair_price = eps * pe_target
-                        st.subheader("📊 換算結果")
-                        st.markdown(f"<div class='calc-box'>合理價參考：<span class='highlight-val'>{fair_price:.2f}</span></div>", unsafe_allow_html=True)
-                        if current_price <= fair_price: 
-                            st.success(f"✅ 目前股價 {current_price:.2f} 低於目標參考價")
-                        else: 
-                            st.warning(f"⚠️ 目前股價 {current_price:.2f} 已超過目標參考價")
+            # --- 分頁 2：FinMind 籌碼 K 線圖 ---
+            with tab2:
+                st.write("#### 近半年 K 線與三大法人買賣超")
+                # 使用 spinner 讓使用者知道正在抓資料
+                with st.spinner("抓取 FinMind 籌碼數據中，請稍候..."):
+                    try:
+                        dl = DataLoader()
+                        # 自動設定抓取時間為「今天」往前推「6 個月」
+                        end_date = datetime.now(tw_tz).strftime('%Y-%m-%d')
+                        start_date = (datetime.now(tw_tz) - pd.DateOffset(months=6)).strftime('%Y-%m-%d')
 
-                # --- 分頁 2：FinMind 籌碼 K 線圖 ---
-                with tab2:
-                    st.write("#### 近半年 K 線與三大法人買賣超")
-                    # 使用 spinner 讓使用者知道正在抓資料
-                    with st.spinner("抓取 FinMind 籌碼數據中，請稍候..."):
-                        try:
-                            dl = DataLoader()
-                            # 自動設定抓取時間為「今天」往前推「6 個月」
-                            end_date = datetime.now(tw_tz).strftime('%Y-%m-%d')
-                            start_date = (datetime.now(tw_tz) - pd.DateOffset(months=6)).strftime('%Y-%m-%d')
+                        # 1. 下載資料
+                        stock_data = dl.taiwan_stock_daily(stock_id=stock_code, start_date=start_date, end_date=end_date)
+                        
+                        if not stock_data.empty:
+                            # 2. 疊加三大法人與融資券資料
+                            stock_data = dl.feature.add_kline_institutional_investors(stock_data)
+                            stock_data = dl.feature.add_kline_margin_purchase_short_sale(stock_data)
 
-                            # 1. 下載資料
-                            stock_data = dl.taiwan_stock_daily(stock_id=stock_code, start_date=start_date, end_date=end_date)
+                            # 3. 繪製圖表並儲存為暫存的 HTML 檔
+                            kline_plot = plotting.kline(stock_data)
+                            kline_plot.render("kline_temp.html")
+
+                            # 4. 讀取 HTML 並內嵌到 Streamlit 畫面中
+                            with open("kline_temp.html", 'r', encoding='utf-8') as f:
+                                source_code = f.read()
+                            components.html(source_code, height=700, scrolling=True)
                             
-                            if not stock_data.empty:
-                                # 2. 疊加三大法人與融資券資料
-                                stock_data = dl.feature.add_kline_institutional_investors(stock_data)
-                                stock_data = dl.feature.add_kline_margin_purchase_short_sale(stock_data)
-
-                                # 3. 繪製圖表並儲存為暫存的 HTML 檔
-                                kline_plot = plotting.kline(stock_data)
-                                kline_plot.render("kline_temp.html")
-
-                                # 4. 讀取 HTML 並內嵌到 Streamlit 畫面中
-                                with open("kline_temp.html", 'r', encoding='utf-8') as f:
-                                    source_code = f.read()
-                                components.html(source_code, height=700, scrolling=True)
-                                
-                                # 5. 顯示完畢後把暫存檔刪掉保持乾淨
-                                if os.path.exists("kline_temp.html"):
-                                    os.remove("kline_temp.html")
-                            else:
-                                st.warning("查無 K 線資料，可能是剛上市或代碼不支援。")
-                                
-                        except Exception as e:
-                            st.error(f"抓取失敗，請稍後再試。錯誤訊息：{e}")
-                # ======= ✨ 分頁功能結束 =======
+                            # 5. 顯示完畢後把暫存檔刪掉保持乾淨
+                            if os.path.exists("kline_temp.html"):
+                                os.remove("kline_temp.html")
+                        else:
+                            st.warning("查無 K 線資料，可能是剛上市或代碼不支援。")
+                            
+                    except Exception as e:
+                        st.error(f"抓取失敗，請稍後再試。錯誤訊息：{e}")
+            # ======= ✨ 分頁功能結束 =======
+        
 
     with side_col:
         st.write("### 📖 說明")
