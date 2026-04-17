@@ -178,7 +178,7 @@ if not st.session_state.logged_in:
 st.markdown("""
     <style>
     .stButton>button { width: 100%; border-radius: 12px; font-weight: bold; border: 1px solid rgba(128, 128, 128, 0.3); height: 3.5em; }
-    .metric-val { font-family: 'Consolas'; font-size: 3.5rem; font-weight: bold; line-height: 1.1; color: var(--text-color) !important; }
+    .metric-val { font-family: 'Consolas'; font-size: 3.5rem; font-weight: bold; line-height: 1.1; }
     .highlight-val { font-size: 2.5rem; font-family: 'Consolas'; font-weight: bold; color: var(--text-color) !important; }
     .stTextInput>div>div>input, .stNumberInput>div>div>input { border-radius: 8px !important; }
     .feature-card { background-color: var(--secondary-background-color); padding: 30px; border-radius: 20px; border: 1px solid rgba(128, 128, 128, 0.2); box-shadow: 0 4px 15px rgba(0,0,0,0.05); text-align: center; transition: all 0.3s ease; margin-bottom: 20px; }
