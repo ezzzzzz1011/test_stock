@@ -435,6 +435,7 @@ with st.sidebar:
     if st.button("🚪 登出系統", use_container_width=True):
         st.session_state.logged_in = False
         st.rerun()
+        st.caption("⚠️ 本系統數據僅供參考，不構成投資建議，投資人請審慎評估風險並自負盈虧。")
 
 if st.session_state.page == "welcome":
     st.markdown("<br><br><br><h3 style='text-align: center; color: #555;'>👈 請從左側選單選擇功能</h3>", unsafe_allow_html=True)
@@ -964,6 +965,5 @@ elif st.session_state.page == "watchlist":
         else:
             st.info("清單空空如也，請在上方新增標的。")
 
-    st.caption("⚠️ 本系統數據僅供參考，不構成投資建議，投資人請審慎評估風險並自負盈虧。")
 
     refresh_watchlist_view()
