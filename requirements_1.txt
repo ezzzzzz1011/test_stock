@@ -1,0 +1,10 @@
+streamlit>=1.37.0
+pandas
+pytz
+plotly
+gspread
+google-auth
+google-auth-oauthlib
+requests
+fugle-marketdata
+yfinance
