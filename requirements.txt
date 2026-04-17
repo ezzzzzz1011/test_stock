@@ -8,5 +8,4 @@ google-auth-oauthlib
 requests
 fugle-marketdata
 yfinance
-FinMind
-tqdm
+
