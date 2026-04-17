@@ -480,7 +480,16 @@ elif st.session_state.page == "stock_query":
             info = get_stock_info(stock_code)
             if info:
                 current_price = info['price']
-                st.markdown(f"## {info['name']}")
+                
+                # ====== ✨ 新增：左右排版與官網搜尋按鈕 ======
+                col_title, col_btn = st.columns([3, 1])
+                with col_title:
+                    st.markdown(f"## {info['name']}")
+                with col_btn:
+                    st.markdown("<div style='margin-top: 15px;'></div>", unsafe_allow_html=True) # 往下推一點對齊標題
+                    st.link_button("🌐 找公司官網", f"https://www.google.com/search?q={info['name']}+公司官網", use_container_width=True)
+                # ============================================
+
                 st.markdown(f"<div class='date-text'>資料日期：{datetime.now(tw_tz).strftime('%Y-%m-%d')}</div>", unsafe_allow_html=True)
                 
                 cp1, cp2 = st.columns([2, 1])
@@ -492,6 +501,8 @@ elif st.session_state.page == "stock_query":
                     st.caption("今日行情細節")
                     st.write(f"最高: {info['high']:.2f} / 最低: {info['low']:.2f}")
                     st.write(f"開盤: {info['open']:.2f} / 總量: {int(info['vol']/1000):,} 張")
+                
+                st.divider() # 加一條線把行情跟試算結果隔開，視覺會比較乾淨
                 
                 # 這裡就不用再放輸入框了，直接進行計算
                 if current_price > 0:
