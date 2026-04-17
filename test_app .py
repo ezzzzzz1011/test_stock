@@ -97,7 +97,7 @@ def login_ui():
     st.markdown("""
         <div style="max-width: 400px; margin: 40px auto 20px auto; padding: 25px; background-color: #f8f9fa; border-radius: 15px; border: 1px solid #dee2e6; box-shadow: 0 4px 12px rgba(0,0,0,0.1); text-align: center;">
             <h2 style="margin: 0; color: #1f1f1f; font-size: 24px;">🚀 台股個股/ETF查詢</h2>
-            <p style="color: #666; margin-top: 8px; margin-bottom: 0; font-size: 14px;">Ez開發 - 投資助手系統</p>
+            <p style="color: #666; margin-top: 8px; margin-bottom: 0; font-size: 14px;">E開發 - 投資助手系統</p>
         </div>
     """, unsafe_allow_html=True)
 
