@@ -964,4 +964,6 @@ elif st.session_state.page == "watchlist":
         else:
             st.info("清單空空如也，請在上方新增標的。")
 
+    st.caption("⚠️ 本系統數據僅供參考，不構成投資建議，投資人請審慎評估風險並自負盈虧。")
+
     refresh_watchlist_view()
