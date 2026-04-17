@@ -461,10 +461,18 @@ elif st.session_state.page == "stock_query":
     st.title("🔍 台股自動估價系統 (個股)")
     main_col, side_col = st.columns([8, 4])
     with main_col:
-        stock_code = st.text_input("請輸入台股代碼 (例如: 2330)", value="")
-        current_price = 0.0
+        # 1. 股票代碼輸入框
+        stock_code = st.text_input("請輸入台股代碼 (例如: 2330)")
+        
+        # 2. ✨ 把 EPS 和 本益比的輸入框搬到這裡 (在 if 的外面) ✨
+        col_eps, col_pe = st.columns(2)
+        with col_eps: eps = st.number_input("輸入該股 EPS (4季累積)", min_value=0.01, step=0.1, value=10.0)
+        with col_pe: pe_target = st.number_input("自訂參考本益比 (PE)", value=15.0, step=0.1)
 
-    if stock_code:
+        st.divider() # 加一條分隔線讓畫面比較好看
+
+        # 3. 有輸入代碼時，才開始抓資料跟計算
+        if stock_code:
             info = get_stock_info(stock_code)
             if info:
                 current_price = info['price']
@@ -481,12 +489,7 @@ elif st.session_state.page == "stock_query":
                     st.write(f"最高: {info['high']:.2f} / 最低: {info['low']:.2f}")
                     st.write(f"開盤: {info['open']:.2f} / 總量: {int(info['vol']/1000):,} 張")
                 
-                st.divider()
-
-                col_eps, col_pe = st.columns(2)
-                with col_eps: eps = st.number_input("輸入該股 EPS (4季累積)", min_value=0.01, step=0.1, value=10.0)
-                with col_pe: pe_target = st.number_input("自訂參考本益比 (PE)", value=15.0, step=0.1)
-                
+                # 這裡就不用再放輸入框了，直接進行計算
                 if current_price > 0:
                     fair_price = eps * pe_target
                     st.subheader("📊 換算結果")
