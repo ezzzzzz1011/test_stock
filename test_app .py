@@ -1025,12 +1025,32 @@ elif st.session_state.page == "watchlist":
 
 
     # ==============================================================
-    # 🌐 頁面：全球大盤與台指戰情室 (精緻邊框版)
+    # 🌐 頁面：全球大盤與台指戰情室 (精緻置中版)
     # ==============================================================
-elif st.session_state.page == "market_index":
+ elif st.session_state.page == "market_index":
         if st.button("⬅ 返回工具箱"):
             go_to("home")
         
+        # --- 🎨 強制置中 CSS 魔法 ---
+        st.markdown("""
+            <style>
+            /* 讓指標容器內的文字置中 */
+            [data-testid="stMetric"] {
+                text-align: center;
+            }
+            /* 讓指標的標籤 (Label) 置中 */
+            [data-testid="stMetricLabel"] {
+                display: flex;
+                justify-content: center;
+            }
+            /* 讓指標的漲跌幅 (Delta) 置中 */
+            [data-testid="stMetricDelta"] {
+                display: flex;
+                justify-content: center;
+            }
+            </style>
+            """, unsafe_allow_html=True)
+
         st.markdown("<h1>🌐 全球大盤與台指戰情室</h1>", unsafe_allow_html=True)
         st.divider()
 
@@ -1067,30 +1087,28 @@ elif st.session_state.page == "market_index":
         
         items = list(indices.items())
         
-        # --- 第一排 (1~3: 美股三大指數) ---
+        # --- 第一排 (1~3) ---
         row1 = st.columns(3)
         for i in range(3):
             name, tk_code = items[i]
             with row1[i]:
-                # 👇 加入這個容器就會有框框
                 with st.container(border=True):
                     p, c, pct = get_market_data(tk_code)
                     if p:
                         st.metric(label=name, value=f"{p:,.2f}", delta=f"{c:+.2f} ({pct:+.2f}%)", delta_color="inverse")
 
-        # --- 第二排 (4~6: 費半、美債、台股加權) ---
+        # --- 第二排 (4~6) ---
         row2 = st.columns(3)
         for i in range(3, 6):
             name, tk_code = items[i]
             with row2[i-3]:
-                # 👇 加入這個容器就會有框框
                 with st.container(border=True):
                     p, c, pct = get_market_data(tk_code)
                     if p:
                         val = f"{p:.3f}%" if tk_code == "^TNX" else f"{p:,.2f}"
                         st.metric(label=name, value=val, delta=f"{c:+.2f} ({pct:+.2f}%)", delta_color="inverse")
 
-        # --- 第三排 (7~9: 台指、原油、匯率) ---
+        # --- 第三排 (7~9) ---
         row3 = st.columns(3)
         
         # 7. 台指期
