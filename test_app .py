@@ -1014,4 +1014,86 @@ elif st.session_state.page == "watchlist":
             st.info("清單空空如也，請在上方新增標的。")
 
 
+    elif st.session_state.page == "market_index":
+        if st.button("⬅ 返回工具箱"):
+            go_to("home")
+            
+        st.markdown("<h1>🌐 全球大盤與台指戰情室</h1>", unsafe_allow_html=True)
+        st.markdown("<p style='color:#888;'>即時追蹤美股科技巨頭與台灣市場動向</p>", unsafe_allow_html=True)
+        st.divider()
+        
+        # --- 建立一個抓取大盤資料的快取函式 (避免一直重複抓取被封鎖) ---
+        @st.cache_data(ttl=300) # 每 5 分鐘更新一次
+        def get_index_data(ticker):
+            try:
+                stock = yf.Ticker(ticker)
+                # 抓取近兩天的收盤價來計算漲跌
+                hist = stock.history(period="2d")
+                if len(hist) >= 2:
+                    current_price = hist['Close'].iloc[-1]
+                    prev_price = hist['Close'].iloc[-2]
+                    change = current_price - prev_price
+                    pct_change = (change / prev_price) * 100
+                    return current_price, change, pct_change
+                return None, None, None
+            except:
+                return None, None, None
+        
+        # 定義我們要抓取的國際指數 (Yahoo 財經代碼)
+        world_indices = {
+            "🇺🇸 道瓊工業指數": "^DJI",
+            "🇺🇸 納斯達克 (綜合)": "^IXIC",
+            "🇺🇸 納斯達克 100": "^NDX",
+            "💻 費城半導體": "^SOX",
+            "🇹🇼 台股加權指數": "^TWII" # 先用加權指數代表台股現貨
+        }
+
+        # --- 顯示區塊 ---
+        st.subheader("🌍 國際重要指數")
+        
+        # 使用 st.columns 將畫面切成三欄 (第一排顯示美股)
+        col1, col2, col3 = st.columns(3)
+        cols = [col1, col2, col3]
+        
+        # 跑迴圈把美股指數畫出來
+        us_keys = list(world_indices.keys())[:3] # 取前三個
+        for i, name in enumerate(us_keys):
+            with cols[i]:
+                with st.spinner("載入中..."):
+                    price, change, pct = get_index_data(world_indices[name])
+                    if price:
+                        # 使用 Streamlit 內建的 metric 卡片，它會自動處理紅綠色！
+                        st.metric(label=name, value=f"{price:,.2f}", delta=f"{change:+.2f} ({pct:+.2f}%)")
+                    else:
+                        st.metric(label=name, value="暫無資料", delta="-")
+        
+        st.markdown("<br>", unsafe_allow_html=True) # 換行
+        
+        # 第二排 (費半、台股大盤、台指期預留)
+        col4, col5, col6 = st.columns(3)
+        
+        with col4:
+            price, change, pct = get_index_data(world_indices["💻 費城半導體"])
+            if price:
+                st.metric(label="💻 費城半導體", value=f"{price:,.2f}", delta=f"{change:+.2f} ({pct:+.2f}%)")
+        
+        with col5:
+            price, change, pct = get_index_data(world_indices["🇹🇼 台股加權指數"])
+            if price:
+                st.metric(label="🇹🇼 台股加權指數", value=f"{price:,.2f}", delta=f"{change:+.2f} ({pct:+.2f}%)")
+                
+        # --- ⚠️ 台指期專屬區塊 (需依賴券商 API) ---
+        with col6:
+            # 這裡我們用一個客製化的卡片來預留位置，等待你未來接上富果或其他券商 API
+            st.markdown("""
+            <div style="padding: 10px; border-radius: 10px; background-color: rgba(255,165,0,0.1); border: 1px dashed orange;">
+                <h4 style="margin:0; color: orange;">⚡ 台指期 / 近全</h4>
+                <p style="font-size: 0.8rem; margin-top: 5px; color: #ccc;">
+                    (需串接券商 API 以取得即時報價)
+                </p>
+                <p style="margin:0; font-weight:bold;">等待連線中...</p>
+            </div>
+            """, unsafe_allow_html=True)
+
+
     refresh_watchlist_view()
