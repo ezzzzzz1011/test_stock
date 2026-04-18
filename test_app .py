@@ -1025,7 +1025,7 @@ elif st.session_state.page == "watchlist":
 
 
     # ==============================================================
-    # 🌐 頁面：全球大盤與台指戰情室 (精緻置中版)
+    # 🌐 頁面：全球大盤與台指戰情室 (日漲跌加強版)
     # ==============================================================
 elif st.session_state.page == "market_index":
         if st.button("⬅ 返回工具箱"):
@@ -1034,19 +1034,12 @@ elif st.session_state.page == "market_index":
         # --- 🎨 強制置中 CSS 魔法 ---
         st.markdown("""
             <style>
-            /* 讓指標容器內的文字置中 */
-            [data-testid="stMetric"] {
-                text-align: center;
-            }
-            /* 讓指標的標籤 (Label) 置中 */
-            [data-testid="stMetricLabel"] {
-                display: flex;
-                justify-content: center;
-            }
-            /* 讓指標的漲跌幅 (Delta) 置中 */
+            [data-testid="stMetric"] { text-align: center; }
+            [data-testid="stMetricLabel"] { display: flex; justify-content: center; }
             [data-testid="stMetricDelta"] {
                 display: flex;
                 justify-content: center;
+                font-weight: 500;
             }
             </style>
             """, unsafe_allow_html=True)
@@ -1054,37 +1047,27 @@ elif st.session_state.page == "market_index":
         st.markdown("<h1>🌐 全球大盤與台指戰情室</h1>", unsafe_allow_html=True)
         st.divider()
 
-        # --- ⚡ 抓取函式 (支援國際指數、期貨與匯率) ---
+        # --- ⚡ 抓取函式 ---
         @st.cache_data(ttl=300)
         def get_market_data(ticker):
             try:
                 tk = yf.Ticker(ticker)
                 current_p = tk.fast_info['last_price']
                 prev_p = tk.fast_info['previous_close']
-                
                 if ticker == "^TNX": # 美債校正
                     current_p /= 10
                     prev_p /= 10
-                
                 change = current_p - prev_p
                 pct = (change / prev_p) * 100
                 return current_p, change, pct
             except:
                 return None, None, None
 
-        # 定義 9 個指標順序
         indices = {
-            "🇺🇸 S&P 500": "^GSPC",
-            "🇺🇸 道瓊工業": "^DJI",
-            "🇺🇸 納斯達克": "^IXIC",
-            "💻 費城半導體": "^SOX",
-            "🇺🇸 美10年債": "^TNX",
-            "🇹🇼 台股加權": "^TWII",
-            "⚡ 台指期 / 近全": "WTX=F",
-            "🛢️ 原油期貨": "CL=F",
-            "💵 美元/台幣": "TWD=X"
+            "🇺🇸 S&P 500": "^GSPC", "🇺🇸 道瓊工業": "^DJI", "🇺🇸 納斯達克": "^IXIC",
+            "💻 費城半導體": "^SOX", "🇺🇸 美10年債": "^TNX", "🇹🇼 台股加權": "^TWII",
+            "⚡ 台指期 / 近全": "WTX=F", "🛢️ 原油期貨": "CL=F", "💵 美元/台幣": "TWD=X"
         }
-        
         items = list(indices.items())
         
         # --- 第一排 (1~3) ---
@@ -1095,7 +1078,8 @@ elif st.session_state.page == "market_index":
                 with st.container(border=True):
                     p, c, pct = get_market_data(tk_code)
                     if p:
-                        st.metric(label=name, value=f"{p:,.2f}", delta=f"{c:+.2f} ({pct:+.2f}%)", delta_color="inverse")
+                        st.metric(label=name, value=f"{p:,.2f}", 
+                                  delta=f"日漲跌 {c:+.2f} ({pct:+.2f}%)", delta_color="inverse")
 
         # --- 第二排 (4~6) ---
         row2 = st.columns(3)
@@ -1106,7 +1090,8 @@ elif st.session_state.page == "market_index":
                     p, c, pct = get_market_data(tk_code)
                     if p:
                         val = f"{p:.3f}%" if tk_code == "^TNX" else f"{p:,.2f}"
-                        st.metric(label=name, value=val, delta=f"{c:+.2f} ({pct:+.2f}%)", delta_color="inverse")
+                        st.metric(label=name, value=val, 
+                                  delta=f"日漲跌 {c:+.2f} ({pct:+.2f}%)", delta_color="inverse")
 
         # --- 第三排 (7~9) ---
         row3 = st.columns(3)
@@ -1116,18 +1101,21 @@ elif st.session_state.page == "market_index":
             with st.container(border=True):
                 p, c, pct = get_market_data("WTX=F")
                 p, c, pct = (p, c, pct) if p else (37742, 664, 1.79)
-                st.metric(label="⚡ 台指期 / 近全", value=f"{p:,.0f}", delta=f"{c:+.0f} ({pct:+.2f}%)", delta_color="inverse")
+                st.metric(label="⚡ 台指期 / 近全", value=f"{p:,.0f}", 
+                          delta=f"日漲跌 {c:+.0f} ({pct:+.2f}%)", delta_color="inverse")
 
         # 8. 原油期貨
         with row3[1]:
             with st.container(border=True):
                 p, c, pct = get_market_data("CL=F")
                 p, c, pct = (p, c, pct) if p else (82.59, -8.58, -9.41)
-                st.metric(label="🛢️ 原油期貨", value=f"{p:,.2f}", delta=f"{c:+.2f} ({pct:+.2f}%)", delta_color="inverse")
+                st.metric(label="🛢️ 原油期貨", value=f"{p:,.2f}", 
+                          delta=f"日漲跌 {c:+.2f} ({pct:+.2f}%)", delta_color="inverse")
 
         # 9. 美元/台幣
         with row3[2]:
             with st.container(border=True):
                 p, c, pct = get_market_data("TWD=X")
                 p, c, pct = (p, c, pct) if p else (31.46, -0.09, -0.29)
-                st.metric(label="💵 美元/台幣", value=f"{p:,.2f}", delta=f"{c:+.2f} ({pct:+.2f}%)", delta_color="inverse")
+                st.metric(label="💵 美元/台幣", value=f"{p:,.2f}", 
+                          delta=f"日漲跌 {c:+.2f} ({pct:+.2f}%)", delta_color="inverse")
