@@ -181,8 +181,29 @@ st.markdown("""
     .metric-val { font-family: 'Consolas'; font-size: 3.5rem; font-weight: bold; line-height: 1.1; }
     .highlight-val { font-size: 2.5rem; font-family: 'Consolas'; font-weight: bold; color: var(--text-color) !important; }
     .stTextInput>div>div>input, .stNumberInput>div>div>input { border-radius: 8px !important; }
-    .feature-card { background-color: var(--secondary-background-color); padding: 30px; border-radius: 20px; border: 1px solid rgba(128, 128, 128, 0.2); box-shadow: 0 4px 15px rgba(0,0,0,0.05); text-align: center; transition: all 0.3s ease; margin-bottom: 20px; }
-    .feature-card:hover { transform: translateY(-5px); box-shadow: 0 8px 25px rgba(0,0,0,0.15); border-color: var(--primary-color); }
+    .feature-card { 
+        background-color: var(--secondary-background-color); 
+        padding: 20px 10px; /* 稍微縮小一點上下左右的內距，防擠壓 */
+        border-radius: 20px; 
+        border: 1px solid rgba(128, 128, 128, 0.2); 
+        box-shadow: 0 4px 15px rgba(0,0,0,0.05); 
+        text-align: center; 
+        transition: all 0.3s ease; 
+        margin-bottom: 20px;
+        
+        /* 👇 這次新增的魔法在這裡 👇 */
+        height: 150px; /* 強制所有卡片都是這個高度 */
+        display: flex; /* 啟動彈性排版 */
+        flex-direction: column; /* 讓內容由上往下排 */
+        justify-content: center; /* 讓內容在卡片裡垂直置中！ */
+        align-items: center; /* 水平置中 */
+    }
+    
+    .feature-card:hover { 
+        transform: translateY(-5px); 
+        box-shadow: 0 8px 25px rgba(0,0,0,0.15); 
+        border-color: var(--primary-color); 
+    }
     .feature-title { font-size: 1.5rem; font-weight: bold; color: var(--text-color); margin-bottom: 10px; }
     .feature-desc { color: var(--text-color); opacity: 0.7; font-size: 1rem; }
     .calc-box, .plan-box, .pk-card { background-color: var(--secondary-background-color); padding: 20px; border-radius: 15px; border: 1px solid rgba(128, 128, 128, 0.3); margin-top: 10px; color: var(--text-color); }
