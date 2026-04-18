@@ -1122,7 +1122,7 @@ elif st.session_state.page == "market_index":
     # ==============================================================
     # ⚖️ 頁面：投資損益記帳 (精緻 Fugle 風格)
     # ==============================================================
-    elif st.session_state.page == "trading":
+elif st.session_state.page == "trading":
         if st.button("⬅ 返回"):
             go_to("home")
         
