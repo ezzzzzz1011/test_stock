@@ -1025,13 +1025,13 @@ elif st.session_state.page == "watchlist":
 
 
     # ==============================================================
-    # 🌐 頁面：全球大盤與台指戰情室 (精簡版 & 正確配色)
+    # 🌐 頁面：全球大盤與台指戰情室 (精簡標題版)
     # ==============================================================
 elif st.session_state.page == "market_index":
         if st.button("⬅ 返回工具箱"):
             go_to("home")
         
-        st.markdown("<h1>🌐 全球大盤與台指戰情室</h1>", unsafe_allow_html=True)
+        st.markdown("<h3 style='margin-top: 10px; margin-bottom: 0px;'>全球大盤</h3>", unsafe_allow_html=True)
         st.divider()
 
         # --- ⚡ 抓取函式 ---
