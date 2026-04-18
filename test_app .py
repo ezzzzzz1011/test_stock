@@ -1066,7 +1066,7 @@ elif st.session_state.page == "market_index":
         indices = {
             "🇺🇸 S&P 500": "^GSPC", "🇺🇸 道瓊工業": "^DJI", "🇺🇸 納斯達克": "^IXIC",
             "💻 費城半導體": "^SOX", "🇺🇸 美10年債": "^TNX", "🇹🇼 台股加權": "^TWII",
-            "⚡ 台指期 / 近全": "WTX=F", "🛢️ 原油期貨": "CL=F", "💵 美元/台幣": "TWD=X"
+            "⚡ 台指期 / 近全": "WTX=F", "🛢️ 原油期貨": "CL=F", "美元/台幣": "TWD=X"
         }
         items = list(indices.items())
         
