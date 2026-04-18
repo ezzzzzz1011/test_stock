@@ -1025,7 +1025,7 @@ elif st.session_state.page == "watchlist":
 
 
     # ==============================================================
-    # 🌐 頁面：全球大盤與台指戰情室
+    # 🌐 頁面：全球大盤與台指戰情室 (修正對齊 Yahoo 數值版)
     # ==============================================================
 elif st.session_state.page == "market_index":
         if st.button("⬅ 返回工具箱"):
@@ -1035,86 +1035,64 @@ elif st.session_state.page == "market_index":
         st.markdown("<p style='color:#888;'>即時追蹤美股科技巨頭與台灣市場動向</p>", unsafe_allow_html=True)
         st.divider()
 
-        # --- ⚡ 專屬台指期的 Fugle API 抓取函式 ---
-        @st.cache_data(ttl=60)
-        def get_tw_future_fugle():
-            FUGLE_API_KEY = "8c74a744-8276-43de-b9ca-7b8a4a463e1a"
-            try:
-                url = "https://api.fugle.tw/marketdata/v1.0/stock/intraday/quote/FITX"
-                headers = {"X-API-KEY": FUGLE_API_KEY}
-                response = requests.get(url, headers=headers, timeout=5)
-                data = response.json()
-                if 'quote' in data:
-                    quote = data['quote']
-                    price = quote.get('close') or quote.get('lastPrice')
-                    prev_close = quote.get('previousClose')
-                    if price and prev_close:
-                        change = price - prev_close
-                        pct = (change / prev_close) * 100
-                        return price, change, pct
-            except:
-                pass
-            return None, None, None
-
-        # --- 🌍 抓取國際大盤資料的函式 ---
+        # --- ⚡ 強化版抓取函式 (直接抓取 Yahoo 畫面大數字) ---
         @st.cache_data(ttl=300)
-        def get_index_data(ticker):
+        def get_market_data(ticker):
             try:
-                stock = yf.Ticker(ticker)
-                hist = stock.history(period="2d")
-                if len(hist) >= 2:
-                    current_price = hist['Close'].iloc[-1]
-                    prev_price = hist['Close'].iloc[-2]
-                    change = current_price - prev_price
-                    pct_change = (change / prev_price) * 100
-                    return current_price, change, pct_change
+                tk = yf.Ticker(ticker)
+                # 💡 使用 fast_info 能直接拿到 Yahoo 網頁上那個大大的最新價格
+                current_p = tk.fast_info['last_price']
+                prev_p = tk.fast_info['previous_close']
+                
+                # 💡 校正美債殖利率 (^TNX): Yahoo 的 45.02 代表 4.502%
+                if ticker == "^TNX":
+                    current_p /= 10
+                    prev_p /= 10
+                
+                change = current_p - prev_p
+                pct = (change / prev_p) * 100
+                return current_p, change, pct
             except:
-                pass
-            return None, None, None
+                return None, None, None
 
-        world_indices = {
-            "🇺🇸 道瓊工業指數": "^DJI",
-            "🇺🇸 納斯達克 (綜合)": "^IXIC",
-            "🇺🇸 納斯達克 100": "^NDX",
+        # 依照你圖 1 的 3x2 排版順序
+        indices = {
+            "🇺🇸 S&P 500": "^GSPC",
+            "🇺🇸 道瓊工業": "^DJI",
+            "🇺🇸 納斯達克": "^IXIC",
             "💻 費城半導體": "^SOX",
-            "🇹🇼 台股加權指數": "^TWII"
+            "🇹🇼 台股加權": "^TWII",
+            "🇺🇸 美10年債殖利率": "^TNX"
         }
 
         st.subheader("🌍 國際重要指數")
         
-        # 第一排：美股三大指數
-        col1, col2, col3 = st.columns(3)
-        us_keys = list(world_indices.keys())[:3]
-        for i, (name, col) in enumerate(zip(us_keys, [col1, col2, col3])):
-            with col:
-                price, change, pct = get_index_data(world_indices[name])
-                if price:
-                    st.metric(label=name, value=f"{price:,.2f}", delta=f"{change:+.2f} ({pct:+.2f}%)", delta_color="inverse")
-                else:
-                    st.metric(label=name, value="載入中...", delta="-")
+        items = list(indices.items())
         
-        st.markdown("<br>", unsafe_allow_html=True)
+        # --- 第一排 (S&P 500, 道瓊, 納斯達克) ---
+        row1 = st.columns(3)
+        for i in range(3):
+            name, tk_code = items[i]
+            with row1[i]:
+                p, c, pct = get_market_data(tk_code)
+                if p:
+                    # 美債顯示 3 位小數 + %，其餘 2 位小數
+                    val = f"{p:.3f}%" if tk_code == "^TNX" else f"{p:,.2f}"
+                    st.metric(label=name, value=val, delta=f"{c:+.2f} ({pct:+.2f}%)", delta_color="inverse")
+                else:
+                    st.metric(label=name, value="暫無資料", delta="-")
 
-        # 第二排：費半、台股大盤、台指期
-        col4, col5, col6 = st.columns(3)
-        with col4:
-            price, change, pct = get_index_data(world_indices["💻 費城半導體"])
-            if price:
-                st.metric(label="💻 費城半導體", value=f"{price:,.2f}", delta=f"{change:+.2f} ({pct:+.2f}%)", delta_color="inverse")
-        with col5:
-            price, change, pct = get_index_data(world_indices["🇹🇼 台股加權指數"])
-            if price:
-                st.metric(label="🇹🇼 台股加權指數", value=f"{price:,.2f}", delta=f"{change:+.2f} ({pct:+.2f}%)", delta_color="inverse")
-        with col6:
-            fut_price, fut_change, fut_pct = get_tw_future_fugle()
-            if fut_price:
-                st.metric(label="⚡ 台指期 / 近全", value=f"{fut_price:,.0f}", delta=f"{fut_change:+.0f} ({fut_pct:+.2f}%)", delta_color="inverse")
-            else:
-                st.markdown("""
-                <div style="padding: 10px; border-radius: 10px; background-color: rgba(255,165,0,0.1); border: 1px dashed orange;">
-                    <h4 style="margin:0; color: orange;">⚡ 台指期 / 近全</h4>
-                    <p style="font-size: 0.8rem; margin-top: 5px; color: #ccc;">(週末休市或 API 連線中)</p>
-                    <p style="margin:0; font-weight:bold;">等待行情中...</p>
-                </div>
-                """, unsafe_allow_html=True)
+        st.markdown("<br>", unsafe_allow_html=True)
+        
+        # --- 第二排 (費半, 台股, 美債) ---
+        row2 = st.columns(3)
+        for i in range(3, 6):
+            name, tk_code = items[i]
+            with row2[i-3]:
+                p, c, pct = get_market_data(tk_code)
+                if p:
+                    val = f"{p:.3f}%" if tk_code == "^TNX" else f"{p:,.2f}"
+                    st.metric(label=name, value=val, delta=f"{c:+.2f} ({pct:+.2f}%)", delta_color="inverse")
+                else:
+                    st.metric(label=name, value="暫無資料", delta="-")
 
