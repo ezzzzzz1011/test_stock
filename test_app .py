@@ -1014,22 +1014,24 @@ elif st.session_state.page == "watchlist":
 
     # 3. 顯示關注列表 (3xN 網格排列，像大盤一樣漂亮)
     if st.session_state.watchlist_data:
-        # 每 3 個一排
-        rows = [st.session_state.watchlist_data[i:i+3] for i in range(0, len(st.session_state.watchlist_data), 3)]
+        # 建立 3 個固定欄位
+        cols = st.columns(3)
         
-        for row_items in rows:
-            cols = st.columns(3)
-            for i, code in enumerate(row_items):
-                with cols[i]:
-                    with st.container(border=True):
-                        # 執行畫圖並判斷
-                        draw_watchlist_card(code, code)
-                        
-                        # 在卡片底部放一個小小的移除按鈕
-                        if st.button(f"🗑️ 移除 {code}", key=f"del_{code}", use_container_width=True):
-                            st.session_state.watchlist_data.remove(code)
-                            save_watchlist_to_cloud(st.session_state.watchlist_data) [cite: 184]
-                            st.rerun()
+        # 依序把股票發牌到 3 個欄位中
+        for i, code in enumerate(st.session_state.watchlist_data):
+            with cols[i % 3]: # 用餘數來決定放在左、中、右哪一欄
+                with st.container(border=True):
+                    # 執行畫圖
+                    draw_watchlist_card(code, code)
+                    
+                    # 🗑️ 刪除按鈕
+                    if st.button(f"🗑️ 移除 {code}", key=f"del_btn_{code}", use_container_width=True):
+                        # 1. 從暫存清單中精準移除這支股票
+                        st.session_state.watchlist_data.remove(code)
+                        # 2. 乾淨地存回雲端
+                        save_watchlist_to_cloud(st.session_state.watchlist_data)
+                        # 3. 立刻重新整理畫面
+                        st.rerun()
     else:
         st.info("目前清單空空如也，請在上方新增標的。")
 
