@@ -993,14 +993,18 @@ elif st.session_state.page == "watchlist":
             now_tw = datetime.now(tw_tz).strftime('%H:%M:%S')
             st.caption(f"⏱️ 行情自動刷新中... ({now_tw})")
             
-            for code in st.session_state.watchlist_data:
-                item = get_stock_info(code)
-                if item:
-                    c1, c2, c3, c4 = st.columns([2, 2, 2, 1])
-                    color = "#ff4b4b" if item['change'] > 0 else "#00ff00"
-                    c1.markdown(f"**{item['name']}** <span style='color:#aaa; font-size:0.9em;'>({item['full_ticker']})</span>", unsafe_allow_html=True)
-                    c2.markdown(f"<span style='color:{color}; font-size:1.3rem; font-weight:bold;'>{item['price']:.2f}</span>", unsafe_allow_html=True)
-                    c3.markdown(f"<span style='color:{color};'>{item['change']:+.2f} ({item['pct']:+.2f}%)</span>", unsafe_allow_html=True)
+            # --- 修改關注清單內的顏色定義 ---
+for code in st.session_state.watchlist_data:
+    item = get_stock_info(code)
+    if item:
+        c1, c2, c3, c4 = st.columns([2, 2, 2, 1])
+        
+        # 💡 修正這裡：漲(>0) 用紅色 #ff4b4b，跌(<0) 用綠色 #00ff00
+        color = "#ff4b4b" if item['change'] > 0 else "#00ff00" if item['change'] < 0 else "#cccccc"
+        
+        c1.markdown(f"**{item['name']}** <span style='color:#aaa; font-size:0.9em;'>({item['full_ticker']})</span>", unsafe_allow_html=True)
+        c2.markdown(f"<span style='color:{color}; font-size:1.3rem; font-weight:bold;'>{item['price']:.2f}</span>", unsafe_allow_html=True)
+        c3.markdown(f"<span style='color:{color};'>{item['change']:+.2f} ({item['pct']:+.2f}%)</span>", unsafe_allow_html=True)
                     
                     if c4.button("刪除", key=f"del_{item['full_ticker']}"):
                         try:
@@ -1079,7 +1083,13 @@ elif st.session_state.page == "market_index":
             with col:
                 price, change, pct = get_index_data(world_indices[name])
                 if price:
-                    st.metric(label=name, value=f"{price:,.2f}", delta=f"{change:+.2f} ({pct:+.2f}%)")
+                    # 💡 加入 delta_color="inverse" 實現紅漲綠跌
+                    st.metric(
+                        label=name, 
+                        value=f"{price:,.2f}", 
+                        delta=f"{change:+.2f} ({pct:+.2f}%)",
+                        delta_color="inverse"
+                    )
                 else:
                     st.metric(label=name, value="載入中...", delta="-")
         
@@ -1091,17 +1101,32 @@ elif st.session_state.page == "market_index":
         with col4:
             price, change, pct = get_index_data(world_indices["💻 費城半導體"])
             if price:
-                st.metric(label="💻 費城半導體", value=f"{price:,.2f}", delta=f"{change:+.2f} ({pct:+.2f}%)")
+                st.metric(
+                    label="💻 費城半導體", 
+                    value=f"{price:,.2f}", 
+                    delta=f"{change:+.2f} ({pct:+.2f}%)",
+                    delta_color="inverse"
+                )
         
         with col5:
             price, change, pct = get_index_data(world_indices["🇹🇼 台股加權指數"])
             if price:
-                st.metric(label="🇹🇼 台股加權指數", value=f"{price:,.2f}", delta=f"{change:+.2f} ({pct:+.2f}%)")
+                st.metric(
+                    label="🇹🇼 台股加權指數", 
+                    value=f"{price:,.2f}", 
+                    delta=f"{change:+.2f} ({pct:+.2f}%)",
+                    delta_color="inverse"
+                )
                 
         with col6:
             fut_price, fut_change, fut_pct = get_tw_future_fugle()
             if fut_price:
-                st.metric(label="⚡ 台指期 / 近全", value=f"{fut_price:,.0f}", delta=f"{fut_change:+.0f} ({fut_pct:+.2f}%)")
+                st.metric(
+                    label="⚡ 台指期 / 近全", 
+                    value=f"{fut_price:,.0f}", 
+                    delta=f"{fut_change:+.0f} ({fut_pct:+.2f}%)",
+                    delta_color="inverse"
+                )
             else:
                 st.markdown("""
                 <div style="padding: 10px; border-radius: 10px; background-color: rgba(255,165,0,0.1); border: 1px dashed orange;">
