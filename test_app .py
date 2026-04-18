@@ -1024,6 +1024,10 @@ elif st.session_state.page == "watchlist":
         else:
             st.info("清單空空如也，請在上方新增標的。")
 
+
+    # ==============================================================
+    # 🌐 頁面：全球大盤與台指戰情室
+    # ==============================================================
 elif st.session_state.page == "market_index":
         if st.button("⬅ 返回工具箱"):
             go_to("home")
@@ -1035,20 +1039,16 @@ elif st.session_state.page == "market_index":
         # --- ⚡ 專屬台指期的 Fugle API 抓取函式 ---
         @st.cache_data(ttl=60)
         def get_tw_future_fugle():
-            # 已幫你填入你的專屬金鑰
             FUGLE_API_KEY = "8c74a744-8276-43de-b9ca-7b8a4a463e1a"
-            
             try:
                 url = "https://api.fugle.tw/marketdata/v1.0/stock/intraday/quote/FITX"
                 headers = {"X-API-KEY": FUGLE_API_KEY}
                 response = requests.get(url, headers=headers, timeout=5)
                 data = response.json()
-                
                 if 'quote' in data:
                     quote = data['quote']
                     price = quote.get('close') or quote.get('lastPrice')
                     prev_close = quote.get('previousClose')
-                    
                     if price and prev_close:
                         change = price - prev_close
                         pct = (change / prev_close) * 100
@@ -1090,13 +1090,7 @@ elif st.session_state.page == "market_index":
             with col:
                 price, change, pct = get_index_data(world_indices[name])
                 if price:
-                    # 💡 加入 delta_color="inverse" 實現紅漲綠跌
-                    st.metric(
-                        label=name, 
-                        value=f"{price:,.2f}", 
-                        delta=f"{change:+.2f} ({pct:+.2f}%)",
-                        delta_color="inverse"
-                    )
+                    st.metric(label=name, value=f"{price:,.2f}", delta=f"{change:+.2f} ({pct:+.2f}%)", delta_color="inverse")
                 else:
                     st.metric(label=name, value="載入中...", delta="-")
         
@@ -1104,36 +1098,18 @@ elif st.session_state.page == "market_index":
 
         # 第二排：費半、台股大盤、台指期
         col4, col5, col6 = st.columns(3)
-        
         with col4:
             price, change, pct = get_index_data(world_indices["💻 費城半導體"])
             if price:
-                st.metric(
-                    label="💻 費城半導體", 
-                    value=f"{price:,.2f}", 
-                    delta=f"{change:+.2f} ({pct:+.2f}%)",
-                    delta_color="inverse"
-                )
-        
+                st.metric(label="💻 費城半導體", value=f"{price:,.2f}", delta=f"{change:+.2f} ({pct:+.2f}%)", delta_color="inverse")
         with col5:
             price, change, pct = get_index_data(world_indices["🇹🇼 台股加權指數"])
             if price:
-                st.metric(
-                    label="🇹🇼 台股加權指數", 
-                    value=f"{price:,.2f}", 
-                    delta=f"{change:+.2f} ({pct:+.2f}%)",
-                    delta_color="inverse"
-                )
-                
+                st.metric(label="🇹🇼 台股加權指數", value=f"{price:,.2f}", delta=f"{change:+.2f} ({pct:+.2f}%)", delta_color="inverse")
         with col6:
             fut_price, fut_change, fut_pct = get_tw_future_fugle()
             if fut_price:
-                st.metric(
-                    label="⚡ 台指期 / 近全", 
-                    value=f"{fut_price:,.0f}", 
-                    delta=f"{fut_change:+.0f} ({fut_pct:+.2f}%)",
-                    delta_color="inverse"
-                )
+                st.metric(label="⚡ 台指期 / 近全", value=f"{fut_price:,.0f}", delta=f"{fut_change:+.0f} ({fut_pct:+.2f}%)", delta_color="inverse")
             else:
                 st.markdown("""
                 <div style="padding: 10px; border-radius: 10px; background-color: rgba(255,165,0,0.1); border: 1px dashed orange;">
@@ -1142,3 +1118,58 @@ elif st.session_state.page == "market_index":
                     <p style="margin:0; font-weight:bold;">等待行情中...</p>
                 </div>
                 """, unsafe_allow_html=True)
+
+    # ==============================================================
+    # ⚖️ 頁面：實戰下單交易
+    # ==============================================================
+elif st.session_state.page == "trading":
+        if st.button("⬅ 返回工具箱"):
+            go_to("home")
+        
+        st.markdown("<h1>⚖️ 實戰下單委託</h1>", unsafe_allow_html=True)
+        st.markdown("<p style='color:#888;'>請確認標的與委託條件後送出</p>", unsafe_allow_html=True)
+        st.divider()
+
+        # 建立下單容器
+        with st.container(border=True):
+            current_ticker = st.session_state.get('last_searched_ticker', '2330.TW')
+            st.subheader(f"🎯 標的：{current_ticker}")
+            
+            # 第一列：交易類別 與 買賣別
+            col_a, col_b = st.columns(2)
+            with col_a:
+                trade_cat = st.radio("交易類別", ["現股", "融資", "融券"], horizontal=True)
+            with col_b:
+                side = st.radio("買賣別", ["買進", "賣出"], horizontal=True)
+
+            st.markdown("<br>", unsafe_allow_html=True)
+
+            # 第二列：價格類型 與 委託種類
+            col_c, col_d = st.columns(2)
+            with col_c:
+                price_type = st.radio("價格類型", ["限價", "市價", "收盤"], horizontal=True)
+            with col_d:
+                order_cond = st.radio("委託種類", ["ROD", "IOC", "FOK"], horizontal=True)
+
+            st.markdown("<hr style='margin: 15px 0; border-color: #444;'>", unsafe_allow_html=True)
+
+            # 第三列：價格與數量輸入
+            col_e, col_f = st.columns(2)
+            with col_e:
+                order_price = st.number_input("委託價格", value=0.0, format="%.2f", step=0.05)
+            with col_f:
+                order_qty = st.number_input("委託數量 (張)", min_value=1, value=1, step=1)
+
+            total_estimate = order_price * order_qty * 1000
+            st.caption(f"💰 預估委託金額 (不含手續費): ${total_estimate:,.0f}")
+            st.markdown("<br>", unsafe_allow_html=True)
+
+            # 送出按鈕 (買紅賣綠)
+            btn_label = f"🚀 送出 {side} 委託"
+            if st.button(btn_label, use_container_width=True, type="primary"):
+                st.success(f"已送出委託：{trade_cat} | {side} | {current_ticker} | {order_price} | {order_qty}張")
+                st.balloons()
+
+        st.markdown("<br>", unsafe_allow_html=True)
+        with st.expander("📝 今日委託回報"):
+            st.write("目前尚無委託紀錄。")
