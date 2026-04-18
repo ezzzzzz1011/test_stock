@@ -1094,6 +1094,4 @@ elif st.session_state.page == "market_index":
                 </p>
                 <p style="margin:0; font-weight:bold;">等待連線中...</p>
             </div>
-            """, unsafe_allow_html=True)
-
-        refresh_watchlist_view()
+            """, unsafe_allow_html=True
