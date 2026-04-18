@@ -469,34 +469,28 @@ elif st.session_state.page == "home":
         st.markdown("<h3 style='color: #888;'>請選擇功能進入：</h3>", unsafe_allow_html=True)
         st.divider()
 
-        # 👇 修改這行：將 5 改成 6，並新增 col_f
-        col_a, col_b, col_c, col_d, col_e, col_f = st.columns(6)
+# 👇 就是這行！必須先創造這 5 個欄位，下面才找得到 col_a
+        col_a, col_b, col_c, col_d, col_e = st.columns(5)
 
-        with col_a:
-            st.markdown('<div class="feature-card"><div class="feature-title">📈 個股分析</div><div class="feature-desc">個股查詢與估價</div></div>', unsafe_allow_html=True)
-            if st.button("進入個股分析", use_container_width=True, type="primary"): go_to("stock_query")
+        with col_a:
+            st.markdown('<div class="feature-card"><div class="feature-title">📈 個股分析</div><div class="feature-desc">個股查詢與估價</div></div>', unsafe_allow_html=True)
+            if st.button("進入個股分析", use_container_width=True, type="primary"): go_to("stock_query")
 
-        with col_b:
-            st.markdown('<div class="feature-card"><div class="feature-title">📊 ETF 分析</div><div class="feature-desc">ETF 試算與規劃</div></div>', unsafe_allow_html=True)
-            if st.button("進入 ETF 分析", use_container_width=True, type="primary"): go_to("etf_query")
+        with col_b:
+            st.markdown('<div class="feature-card"><div class="feature-title">📊 ETF 分析</div><div class="feature-desc">ETF 試算與規劃</div></div>', unsafe_allow_html=True)
+            if st.button("進入 ETF 分析", use_container_width=True, type="primary"): go_to("etf_query")
 
-        with col_c:
-            st.markdown('<div class="feature-card"><div class="feature-title">⚔️ ETF 對比</div><div class="feature-desc">ETF 對比工具</div></div>', unsafe_allow_html=True)
-            if st.button("進入對比工具", use_container_width=True, type="primary"): go_to("pk_tool")
+        with col_c:
+            st.markdown('<div class="feature-card"><div class="feature-title">⚔️ ETF 對比</div><div class="feature-desc">ETF 對比工具</div></div>', unsafe_allow_html=True)
+            if st.button("進入對比工具", use_container_width=True, type="primary"): go_to("pk_tool")
 
-        with col_d:
-            st.markdown('<div class="feature-card"><div class="feature-title">💼 我的資產</div><div class="feature-desc">個人投資組合</div></div>', unsafe_allow_html=True)
-            if st.button("進入我的資產", use_container_width=True, type="primary"): go_to("portfolio")
+        with col_d:
+            st.markdown('<div class="feature-card"><div class="feature-title">💼 我的資產</div><div class="feature-desc">個人投資組合</div></div>', unsafe_allow_html=True)
+            if st.button("進入我的資產", use_container_width=True, type="primary"): go_to("portfolio")
 
-        with col_e:
-            st.markdown('<div class="feature-card"><div class="feature-title">🌐 大盤指數</div><div class="feature-desc">市場整體趨勢與氣氛</div></div>', unsafe_allow_html=True)
-            if st.button("進入大盤指數", use_container_width=True, type="primary"): go_to("market_index")
-        
-        # 👇 這是新增的第六個欄位：交易
-        with col_f:
-            st.markdown('<div class="feature-card"><div class="feature-title">⚖️ 交易模式</div><div class="feature-desc">實戰下單與委託</div></div>', unsafe_allow_html=True)
-            # 這裡的 go_to("trading") 需要你之後在頁面判斷邏輯中新增對應的頁面
-            if st.button("進入交易", use_container_width=True, type="primary"): go_to("trading")
+        with col_e:
+            st.markdown('<div class="feature-card"><div class="feature-title">🌐 大盤指數</div><div class="feature-desc">市場整體趨勢與氣氛</div></div>', unsafe_allow_html=True)
+            if st.button("進入大盤指數", use_container_width=True, type="primary"): go_to("market_index")
 
 
 
