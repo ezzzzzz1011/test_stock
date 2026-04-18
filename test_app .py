@@ -1120,39 +1120,42 @@ elif st.session_state.page == "market_index":
                 """, unsafe_allow_html=True)
 
     # ==============================================================
-    # ⚖️ 頁面：投資帳簿與實戰紀錄
+    # ⚖️ 頁面：投資帳簿與實戰紀錄 (修正債券 ETF 抓價版)
     # ==============================================================
 elif st.session_state.page == "trading":
         if st.button("⬅ 返回工具箱"):
             go_to("home")
         
-        # --- 1. 初始化交易紀錄儲存空間 ---
         if 'trade_history' not in st.session_state:
             st.session_state.trade_history = []
 
-        # 介面佈局：左邊輸入，右邊顯示紀錄 (或是上下排版)
         st.markdown("<h2 style='text-align: center;'>⚖️ 投資交易帳簿</h2>", unsafe_allow_html=True)
         
-        # --- 2. 新增紀錄區 ---
+        # --- 1. 新增紀錄區 ---
         with st.container(border=True):
             st.markdown("#### ➕ 新增成交紀錄")
             c1, c2, c3 = st.columns([1.5, 1, 1])
             with c1:
-                t_in = st.text_input("股票代號", value="2330", key="trade_ticker").upper()
-                ticker = f"{t_in}.TW" if "." not in t_in else t_in
+                t_in = st.text_input("股票代號", value="00937B", key="trade_ticker").upper().strip()
+                # 💡 自動修正後綴邏輯
+                if "." not in t_in:
+                    # 債券 ETF (結尾是 B) 或 權證通常在 OTC (.TWO)
+                    if t_in.endswith("B"):
+                        ticker = f"{t_in}.TWO"
+                    else:
+                        ticker = f"{t_in}.TW"
+                else:
+                    ticker = t_in
             with c2:
-                buy_p = st.number_input("成交單價", min_value=0.0, step=0.05, format="%.2f", value=600.0)
+                buy_p = st.number_input("買入單價", min_value=0.0, step=0.01, format="%.2f", value=15.0)
             with c3:
-                buy_q = st.number_input("成交張數", min_value=0.001, step=0.1, format="%.3f", value=1.0)
+                buy_q = st.number_input("買入張數", min_value=0.001, step=0.1, format="%.3f", value=1.0)
             
             if st.button("📥 新增至交易紀錄", use_container_width=True, type="primary"):
-                # 計算買入成本 (含0.3%手續費)
                 fee_rate = 0.003
                 cost_raw = buy_p * buy_q * 1000
-                buy_fee = cost_raw * fee_rate
-                total_cost = cost_raw + buy_fee
+                total_cost = cost_raw * (1 + fee_rate)
                 
-                # 存入 session_state
                 new_record = {
                     "ticker": ticker,
                     "buy_p": buy_p,
@@ -1166,66 +1169,70 @@ elif st.session_state.page == "trading":
 
         st.markdown("<br>", unsafe_allow_html=True)
 
-        # --- 3. 交易紀錄列表與彙整計算 ---
+        # --- 2. 交易紀錄列表 ---
         if st.session_state.trade_history:
             st.markdown("#### 📜 交易紀錄彙整")
             
             total_portfolio_pnl = 0
             total_portfolio_cost = 0
             
-            # 建立表格顯示
             for i, record in enumerate(st.session_state.trade_history):
                 with st.container(border=True):
-                    # 每一筆紀錄自動去抓現價
+                    # 💡 強化抓價邏輯
+                    current_p = None
                     try:
-                        stock = yf.Ticker(record['ticker'])
-                        # 為了效能，我們抓取 fast_info
-                        current_p = stock.fast_info['last_price']
+                        tk = yf.Ticker(record['ticker'])
+                        # 優先嘗試快速抓取
+                        current_p = tk.fast_info.get('last_price')
+                        # 如果快速抓取失敗 (或是週末)，抓取最近 1 天歷史紀錄
+                        if current_p is None or np.isnan(current_p):
+                            hist = tk.history(period="1d")
+                            if not hist.empty:
+                                current_p = hist['Close'].iloc[-1]
                     except:
-                        current_p = record['buy_p'] # 抓不到就用買價代替
-
-                    # 計算單筆損益
-                    market_val = current_p * record['buy_q'] * 1000
-                    sell_fee = market_val * 0.003
-                    net_val = market_val - sell_fee
-                    pnl = net_val - record['total_cost']
-                    roi = (pnl / record['total_cost']) * 100
+                        pass
                     
-                    # 累加到總資產
+                    # 💡 如果還是抓不到 (例如代碼真的錯了)，才用買價
+                    display_p = current_p if current_p is not None else record['buy_p']
+                    
+                    # 計算損益 (含賣出手續費 0.3%)
+                    market_val = display_p * record['buy_q'] * 1000
+                    net_val = market_val * (1 - 0.003)
+                    pnl = net_val - record['total_cost']
+                    roi = (pnl / record['total_cost']) * 100 if record['total_cost'] > 0 else 0
+                    
                     total_portfolio_pnl += pnl
                     total_portfolio_cost += record['total_cost']
 
-                    # 顯示介面
                     r_col1, r_col2, r_col3, r_col4 = st.columns([1.5, 1.5, 2, 0.5])
                     with r_col1:
                         st.markdown(f"**{record['ticker']}**")
                         st.caption(f"買入: {record['buy_p']} ({record['buy_q']}張)")
                     with r_col2:
-                        st.markdown(f"現價: **{current_p:,.2f}**")
+                        # 如果抓不到價格，顯示警告色
+                        p_display_color = "#ffffff" if current_p is not None else "#ffcc00"
+                        st.markdown(f"現價: <span style='color:{p_display_color};'>**{display_p:,.2f}**</span>", unsafe_allow_html=True)
                         st.caption(f"成本: ${record['total_cost']:,.0f}")
                     with r_col3:
                         p_color = "#ff4b4b" if pnl >= 0 else "#00ff00"
-                        st.markdown(f"<span style='color:{p_color}; font-size:1.2rem; font-weight:bold;'>{pnl:+,.0f} ({roi:+.2f}%)</span>", unsafe_allow_html=True)
+                        st.markdown(f"<span style='color:{p_color}; font-size:1.1rem; font-weight:bold;'>{pnl:+,.0f} ({roi:+.2f}%)</span>", unsafe_allow_html=True)
+                        if current_p is None: st.caption("⚠️ 無法取得市價")
                     with r_col4:
                         if st.button("🗑️", key=f"del_{i}"):
                             st.session_state.trade_history.pop(i)
                             st.rerun()
 
-            # --- 4. 底部：總損益總計 ---
+            # --- 3. 底部總計 ---
             st.markdown("---")
             summary_color = "#ff4b4b" if total_portfolio_pnl >= 0 else "#00ff00"
             total_roi = (total_portfolio_pnl / total_portfolio_cost * 100) if total_portfolio_cost > 0 else 0
             
             st.markdown(f"""
                 <div style="background: rgba(255,255,255,0.05); padding: 20px; border-radius: 15px; text-align: center; border: 1px solid #444;">
-                    <p style="margin:0; color:#aaa;">總投資組合損益 (已含雙邊手續費)</p>
+                    <p style="margin:0; color:#aaa;">總投資組合損益 (含預估交易成本)</p>
                     <h1 style="margin:10px 0; color:{summary_color};">{total_portfolio_pnl:+,.0f}</h1>
                     <h3 style="margin:0; color:{summary_color};">總報酬率 {total_roi:+.2f}%</h3>
                 </div>
             """, unsafe_allow_html=True)
-            
-            if st.button("🧹 清空所有紀錄"):
-                st.session_state.trade_history = []
-                st.rerun()
         else:
-            st.info("目前尚無紀錄，請在上方新增您的第一筆成交資料。")
+            st.info("目前尚無紀錄。")
