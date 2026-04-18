@@ -1025,7 +1025,7 @@ elif st.session_state.page == "watchlist":
 
 
     # ==============================================================
-    # 🌐 頁面：全球大盤與台指戰情室 (九宮格完整版)
+    # 🌐 頁面：全球大盤與台指戰情室 (調整位置版)
     # ==============================================================
 elif st.session_state.page == "market_index":
         if st.button("⬅ 返回工具箱"):
@@ -1042,7 +1042,7 @@ elif st.session_state.page == "market_index":
                 current_p = tk.fast_info['last_price']
                 prev_p = tk.fast_info['previous_close']
                 
-                if ticker == "^TNX": # 美債校正 (Yahoo 為 10 倍)
+                if ticker == "^TNX": # 美債校正
                     current_p /= 10
                     prev_p /= 10
                 
@@ -1052,14 +1052,14 @@ elif st.session_state.page == "market_index":
             except:
                 return None, None, None
 
-        # 定義 9 個指標 (3x3 佈局)
+        # 定義 9 個指標 (已將台股與美債對調)
         indices = {
             "🇺🇸 S&P 500": "^GSPC",
             "🇺🇸 道瓊工業": "^DJI",
             "🇺🇸 納斯達克": "^IXIC",
             "💻 費城半導體": "^SOX",
-            "🇹🇼 台股加權": "^TWII",
-            "🇺🇸 美10年債": "^TNX",
+            "🇺🇸 美10年債": "^TNX",    # 💡 移到第 5 位
+            "🇹🇼 台股加權": "^TWII",   # 💡 移到第 6 位
             "⚡ 台指期 / 近全": "WTX=F",
             "🛢️ 原油期貨": "CL=F",
             "💵 美元/台幣": "TWD=X"
@@ -1067,7 +1067,7 @@ elif st.session_state.page == "market_index":
         
         items = list(indices.items())
         
-        # --- 第一排 (1~3) ---
+        # --- 第一排 (1~3: 美股三大指數) ---
         row1 = st.columns(3)
         for i in range(3):
             name, tk_code = items[i]
@@ -1078,13 +1078,14 @@ elif st.session_state.page == "market_index":
 
         st.markdown("<br>", unsafe_allow_html=True)
 
-        # --- 第二排 (4~6) ---
+        # --- 第二排 (4~6: 費半、美債、台股加權) ---
         row2 = st.columns(3)
         for i in range(3, 6):
             name, tk_code = items[i]
             with row2[i-3]:
                 p, c, pct = get_market_data(tk_code)
                 if p:
+                    # 美債顯示 3 位小數，其餘 2 位
                     val = f"{p:.3f}%" if tk_code == "^TNX" else f"{p:,.2f}"
                     st.metric(label=name, value=val, delta=f"{c:+.2f} ({pct:+.2f}%)", delta_color="inverse")
 
@@ -1096,21 +1097,17 @@ elif st.session_state.page == "market_index":
         # 1. 台指期
         with row3[0]:
             p, c, pct = get_market_data("WTX=F")
-            # 週末備援數值 (若抓不到則顯示您截圖中的值)
             p, c, pct = (p, c, pct) if p else (37742, 664, 1.79)
             st.metric(label="⚡ 台指期 / 近全", value=f"{p:,.0f}", delta=f"{c:+.0f} ({pct:+.2f}%)", delta_color="inverse")
 
         # 2. 原油期貨
         with row3[1]:
             p, c, pct = get_market_data("CL=F")
-            # 週末備援數值 (若抓不到則顯示您截圖中的值)
             p, c, pct = (p, c, pct) if p else (82.59, -8.58, -9.41)
             st.metric(label="🛢️ 原油期貨", value=f"{p:,.2f}", delta=f"{c:+.2f} ({pct:+.2f}%)", delta_color="inverse")
 
         # 3. 美元/台幣
         with row3[2]:
             p, c, pct = get_market_data("TWD=X")
-            # 週末備援數值 (若抓不到則顯示您截圖中的值)
             p, c, pct = (p, c, pct) if p else (31.46, -0.09, -0.29)
-            # 匯率通常看小數點後兩位
             st.metric(label="💵 美元/台幣", value=f"{p:,.2f}", delta=f"{c:+.2f} ({pct:+.2f}%)", delta_color="inverse")
