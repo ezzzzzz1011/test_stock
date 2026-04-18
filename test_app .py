@@ -1120,77 +1120,93 @@ elif st.session_state.page == "market_index":
                 """, unsafe_allow_html=True)
 
     # ==============================================================
-    # ⚖️ 頁面：實戰下單交易 (Fugle 精簡版)
+    # ⚖️ 頁面：投資成交記錄 (損益試算)
     # ==============================================================
 elif st.session_state.page == "trading":
         if st.button("⬅ 返回"):
             go_to("home")
         
-        # 讓整個面板寬度不要太大，置中顯示
         _, center_col, _ = st.columns([1, 4, 1])
         
         with center_col:
-            st.markdown("### ⚖️ 下單委託")
+            st.markdown("### 📝 新增成交記錄")
             
             with st.container(border=True):
-                # 1. 股票代號輸入
-                default_ticker = st.session_state.get('last_searched_ticker', '2330').split('.')[0]
-                trade_ticker = st.text_input("股票代號", value=default_ticker)
+                # 1. 股票代號輸入 (自動補上 .TW)
+                raw_ticker = st.text_input("股票代號", value="2330").upper()
+                ticker = f"{raw_ticker}.TW" if "." not in raw_ticker else raw_ticker
                 
-                # 2. 買賣別切換 (仿按鈕式)
-                side = st.radio("買賣別", ["買進", "賣出"], horizontal=True, label_visibility="collapsed")
-                
-                # 根據買賣設定顏色
-                theme_color = "#ff4b4b" if side == "買進" else "#00ff00"
-                st.markdown(f"""<style>div.stRadio > div {{ border: 2px solid {theme_color}; border-radius: 5px; padding: 2px; }}</style>""", unsafe_allow_html=True)
-
-                st.markdown("<br>", unsafe_allow_html=True)
-
-                # 3. 類別與種類
-                t_col1, t_col2 = st.columns(2)
-                with t_col1:
-                    trade_type = st.radio("類別", ["現股", "融資", "融券"], horizontal=True)
-                with t_col2:
-                    order_cond = st.radio("種類", ["ROD", "IOC", "FOK"], horizontal=True)
+                # 2. 買入資料
+                p_col1, p_col2 = st.columns(2)
+                with p_col1:
+                    buy_price = st.number_input("買入成交單價", min_value=0.0, step=0.05, format="%.2f")
+                with p_col2:
+                    buy_qty = st.number_input("買入張數 (0.1為100股)", min_value=0.001, value=1.0, step=0.1, format="%.3f")
 
                 st.divider()
 
-                # 4. 價格與張數 (支援 0.x 張)
-                p_col1, p_col2 = st.columns(2)
-                with p_col1:
-                    trade_price = st.number_input("委託價格", value=0.0, step=0.05, format="%.2f")
-                with p_col2:
-                    # 💡 step=0.001 讓你可以輸入 0.1 或 0.05
-                    trade_qty = st.number_input("張數 (0.1為100股)", value=1.0, step=0.1, format="%.3f")
+                # 3. 點擊按鈕開始計算
+                if st.button("🔍 計算目前損益", use_container_width=True, type="primary"):
+                    try:
+                        # 抓取即時市價
+                        stock = yf.Ticker(ticker)
+                        current_data = stock.history(period="1d")
+                        
+                        if current_data.empty:
+                            st.error("找不到該股票資料，請檢查代號是否正確。")
+                        else:
+                            current_price = current_data['Close'].iloc[-1]
+                            
+                            # --- 計算邏輯 ---
+                            fee_rate = 0.003  # 手續費 0.3%
+                            
+                            # 原始成本 = 買價 * 張數 * 1000
+                            raw_cost = buy_price * buy_qty * 1000
+                            # 買入手續費
+                            buy_fee = raw_cost * fee_rate
+                            # 總成本 (你要付出的錢)
+                            total_cost = raw_cost + buy_fee
+                            
+                            # 目前市值 = 現價 * 張數 * 1000
+                            current_market_value = current_price * buy_qty * 1000
+                            # 預估賣出手續費 (先計算出來讓損益更準確)
+                            sell_fee = current_market_value * fee_rate
+                            # 預估淨現值 (賣掉後拿回來的錢)
+                            net_value = current_market_value - sell_fee
+                            
+                            # 損益 = 淨現值 - 總成本
+                            pnl = net_value - total_cost
+                            pnl_rate = (pnl / total_cost) * 100
+                            
+                            # --- 顯示結果介面 ---
+                            st.markdown("#### 📊 損益試算報告")
+                            
+                            res_c1, res_c2 = st.columns(2)
+                            res_c1.metric("買入成本", f"${total_cost:,.0f}")
+                            res_c2.metric("目前現價", f"${current_price:,.2f}")
 
-                # 5. 金額試算邏輯
-                gross_amount = trade_price * trade_qty * 1000
-                fee_rate = 0.003  # 大廚要求的手續費 0.3%
-                fees = gross_amount * fee_rate
-                
-                # 買進加手續費，賣出減手續費 (這裡先顯示預估總額)
-                total_final = (gross_amount + fees) if side == "買進" else (gross_amount - fees)
-
-                # 顯示試算結果清單
-                st.markdown(f"""
-                <div style="background: rgba(255,255,255,0.05); padding: 15px; border-radius: 10px; font-size: 0.9rem;">
-                    <div style="display:flex; justify-content:space-between;"><span>預估金額:</span> <span>${gross_amount:,.0f}</span></div>
-                    <div style="display:flex; justify-content:space-between; color: #aaa;"><span>手續費 (0.3%):</span> <span>${fees:,.0f}</span></div>
-                    <hr style="margin: 8px 0; border-color: #444;">
-                    <div style="display:flex; justify-content:space-between; font-weight:bold; font-size:1.1rem; color:{theme_color};">
-                        <span>{'應付金額' if side == '買進' else '實收金額'}:</span> 
-                        <span>${total_final:,.0f}</span>
-                    </div>
-                </div>
-                """, unsafe_allow_html=True)
-
-                st.markdown("<br>", unsafe_allow_html=True)
-
-                # 6. 下單按鈕
-                if st.button(f"確認 {side} {trade_ticker}", use_container_width=True, type="primary"):
-                    st.success(f"已送出委託：{trade_ticker} {side} {trade_qty} 張，價格 {trade_price}")
-                    st.balloons()
-
-        st.markdown("<br>", unsafe_allow_html=True)
-        with st.expander("📝 今日委託回報"):
-            st.write("目前尚無委託紀錄。")
+                            # 損益配色：台股習慣 紅賺綠賠
+                            pnl_color = "#ff4b4b" if pnl >= 0 else "#00ff00"
+                            
+                            st.markdown(f"""
+                            <div style="background: rgba(255,255,255,0.05); padding: 20px; border-radius: 12px; border-left: 5px solid {pnl_color};">
+                                <div style="font-size: 0.9rem; color: #aaa;">預估總損益 (含手續費)</div>
+                                <div style="font-size: 2rem; font-weight: bold; color: {pnl_color};">
+                                    {'+' if pnl >= 0 else ''}{pnl:,.0f}
+                                </div>
+                                <div style="font-size: 1.1rem; color: {pnl_color};">
+                                    報酬率: {'+' if pnl >= 0 else ''}{pnl_rate:.2f}%
+                                </div>
+                            </div>
+                            """, unsafe_allow_html=True)
+                            
+                            # 詳細數據表格
+                            with st.expander("查看詳細試算"):
+                                st.write(f"股票標的: {ticker}")
+                                st.write(f"買入單價: {buy_price}")
+                                st.write(f"持有數量: {buy_qty} 張")
+                                st.write(f"預估買入手續費: ${buy_fee:,.0f}")
+                                st.write(f"預估賣出手續費: ${sell_fee:,.0f}")
+                                
+                    except Exception as e:
+                        st.error(f"發生錯誤: {e}")
