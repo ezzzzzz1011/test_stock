@@ -1012,14 +1012,15 @@ elif st.session_state.page == "watchlist":
                 st.markdown("<hr style='margin-top: -15px; margin-bottom: 10px; border: none; border-top: 1px solid rgba(128, 128, 128, 0.3);'>", unsafe_allow_html=True)
         else:
             st.info("清單空空如也，請在上方新增標的。")
-           
-        elif st.session_state.page == "market_index":
-            if st.button("⬅ 返回工具箱"):
-                go_to("home")
+
+    # 👇 🚨 魔法在這裡：把 elif 往左退出函數，讓它成為獨立的頁面判斷！
+    elif st.session_state.page == "market_index":
+        if st.button("⬅ 返回工具箱"):
+            go_to("home")
         
-            st.markdown("<h1>🌐 全球大盤與台指戰情室</h1>", unsafe_allow_html=True)
-            st.markdown("<p style='color:#888;'>即時追蹤美股科技巨頭與台灣市場動向</p>", unsafe_allow_html=True)
-            st.divider()
+        st.markdown("<h1>🌐 全球大盤與台指戰情室</h1>", unsafe_allow_html=True)
+        st.markdown("<p style='color:#888;'>即時追蹤美股科技巨頭與台灣市場動向</p>", unsafe_allow_html=True)
+        st.divider()
         
         
         # --- 建立一個抓取大盤資料的快取函式 (避免一直重複抓取被封鎖) ---
