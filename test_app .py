@@ -1013,7 +1013,6 @@ elif st.session_state.page == "watchlist":
         else:
             st.info("清單空空如也，請在上方新增標的。")
 
-    # 👇 🚨 魔法在這裡：把 elif 往左退出函數，讓它成為獨立的頁面判斷！
 elif st.session_state.page == "market_index":
         if st.button("⬅ 返回工具箱"):
             go_to("home")
@@ -1021,48 +1020,37 @@ elif st.session_state.page == "market_index":
         st.markdown("<h1>🌐 全球大盤與台指戰情室</h1>", unsafe_allow_html=True)
         st.markdown("<p style='color:#888;'>即時追蹤美股科技巨頭與台灣市場動向</p>", unsafe_allow_html=True)
         st.divider()
-        
-        # ==============================================================
-        # --- 新增：專屬台指期的 Fugle API 抓取函式 ---
-        @st.cache_data(ttl=60)  # 設定 60 秒更新一次
+
+        # --- ⚡ 專屬台指期的 Fugle API 抓取函式 ---
+        @st.cache_data(ttl=60)
         def get_tw_future_fugle():
-            # 🔑 你的富果專屬金鑰
+            # 已幫你填入你的專屬金鑰
             FUGLE_API_KEY = "8c74a744-8276-43de-b9ca-7b8a4a463e1a"
             
-            if not FUGLE_API_KEY:
-                return None, None, None 
-
             try:
-                # FITX 是台指期近月的通用代碼
                 url = "https://api.fugle.tw/marketdata/v1.0/stock/intraday/quote/FITX"
                 headers = {"X-API-KEY": FUGLE_API_KEY}
-                
-                # 發送請求給富果伺服器
                 response = requests.get(url, headers=headers, timeout=5)
                 data = response.json()
                 
-                # 解析富果回傳的 JSON 結構
                 if 'quote' in data:
                     quote = data['quote']
-                    price = quote.get('close') or quote.get('lastPrice') # 最新成交價
-                    prev_close = quote.get('previousClose') # 昨收價
+                    price = quote.get('close') or quote.get('lastPrice')
+                    prev_close = quote.get('previousClose')
                     
                     if price and prev_close:
                         change = price - prev_close
                         pct = (change / prev_close) * 100
                         return price, change, pct
-            except Exception as e:
-                return None, None, None
-                
+            except:
+                pass
             return None, None, None
-        # ==============================================================
-        
-        # --- 建立一個抓取大盤資料的快取函式 (避免一直重複抓取被封鎖) ---
-        @st.cache_data(ttl=300) # 每 5 分鐘更新一次
+
+        # --- 🌍 抓取國際大盤資料的函式 ---
+        @st.cache_data(ttl=300)
         def get_index_data(ticker):
             try:
                 stock = yf.Ticker(ticker)
-                # 抓取近兩天的收盤價來計算漲跌
                 hist = stock.history(period="2d")
                 if len(hist) >= 2:
                     current_price = hist['Close'].iloc[-1]
@@ -1070,41 +1058,34 @@ elif st.session_state.page == "market_index":
                     change = current_price - prev_price
                     pct_change = (change / prev_price) * 100
                     return current_price, change, pct_change
-                return None, None, None
             except:
-                return None, None, None
-        
-        # 定義我們要抓取的國際指數 (Yahoo 財經代碼)
+                pass
+            return None, None, None
+
         world_indices = {
             "🇺🇸 道瓊工業指數": "^DJI",
             "🇺🇸 納斯達克 (綜合)": "^IXIC",
             "🇺🇸 納斯達克 100": "^NDX",
             "💻 費城半導體": "^SOX",
-            "🇹🇼 台股加權指數": "^TWII" # 先用加權指數代表台股現貨
+            "🇹🇼 台股加權指數": "^TWII"
         }
 
-        # --- 顯示區塊 ---
         st.subheader("🌍 國際重要指數")
         
-        # 使用 st.columns 將畫面切成三欄 (第一排顯示美股)
+        # 第一排：美股三大指數
         col1, col2, col3 = st.columns(3)
-        cols = [col1, col2, col3]
+        us_keys = list(world_indices.keys())[:3]
+        for i, (name, col) in enumerate(zip(us_keys, [col1, col2, col3])):
+            with col:
+                price, change, pct = get_index_data(world_indices[name])
+                if price:
+                    st.metric(label=name, value=f"{price:,.2f}", delta=f"{change:+.2f} ({pct:+.2f}%)")
+                else:
+                    st.metric(label=name, value="載入中...", delta="-")
         
-        # 跑迴圈把美股指數畫出來
-        us_keys = list(world_indices.keys())[:3] # 取前三個
-        for i, name in enumerate(us_keys):
-            with cols[i]:
-                with st.spinner("載入中..."):
-                    price, change, pct = get_index_data(world_indices[name])
-                    if price:
-                        # 使用 Streamlit 內建的 metric 卡片，它會自動處理紅綠色！
-                        st.metric(label=name, value=f"{price:,.2f}", delta=f"{change:+.2f} ({pct:+.2f}%)")
-                    else:
-                        st.metric(label=name, value="暫無資料", delta="-")
-        
-        st.markdown("<br>", unsafe_allow_html=True) # 換行
-        
-        # 第二排 (費半、台股大盤、台指期預留)
+        st.markdown("<br>", unsafe_allow_html=True)
+
+        # 第二排：費半、台股大盤、台指期
         col4, col5, col6 = st.columns(3)
         
         with col4:
@@ -1117,25 +1098,15 @@ elif st.session_state.page == "market_index":
             if price:
                 st.metric(label="🇹🇼 台股加權指數", value=f"{price:,.2f}", delta=f"{change:+.2f} ({pct:+.2f}%)")
                 
-        # --- ⚡ 台指期專屬區塊 (富果 API 連線) ---
         with col6:
             fut_price, fut_change, fut_pct = get_tw_future_fugle()
-            
-            # 如果成功抓到資料，就顯示漂亮的跳動數字卡片
             if fut_price:
-                st.metric(
-                    label="⚡ 台指期 / 近全", 
-                    value=f"{fut_price:,.0f}", 
-                    delta=f"{fut_change:+.0f} ({fut_pct:+.2f}%)"
-                )
+                st.metric(label="⚡ 台指期 / 近全", value=f"{fut_price:,.0f}", delta=f"{fut_change:+.0f} ({fut_pct:+.2f}%)")
             else:
-                # 如果還沒填金鑰，或是連線失敗，就顯示提示框
                 st.markdown("""
                 <div style="padding: 10px; border-radius: 10px; background-color: rgba(255,165,0,0.1); border: 1px dashed orange;">
                     <h4 style="margin:0; color: orange;">⚡ 台指期 / 近全</h4>
-                    <p style="font-size: 0.8rem; margin-top: 5px; color: #ccc;">
-                        (尚未填寫 Fugle API Key 或連線失敗)
-                    </p>
-                    <p style="margin:0; font-weight:bold;">等待綁定中...</p>
+                    <p style="font-size: 0.8rem; margin-top: 5px; color: #ccc;">(週末休市或 API 連線中)</p>
+                    <p style="margin:0; font-weight:bold;">等待行情中...</p>
                 </div>
                 """, unsafe_allow_html=True)
