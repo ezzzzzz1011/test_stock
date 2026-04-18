@@ -13,7 +13,7 @@ from google.oauth2.service_account import Credentials
 from fugle_marketdata import RestClient
 
 # --- 1. 網頁全域設定 (必須放在最上方) ---
-st.set_page_config(page_title="台股個股/ETF查詢 Ez開發", page_icon="🔍", layout="wide")
+st.set_page_config(page_title="Ez測試版", page_icon="🔍", layout="wide")
 tw_tz = pytz.timezone('Asia/Taipei')
 
 # --- 0. 雲端資料庫連線與帳號邏輯 ---
