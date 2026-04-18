@@ -1014,7 +1014,7 @@ elif st.session_state.page == "watchlist":
             st.info("清單空空如也，請在上方新增標的。")
 
     # 👇 🚨 魔法在這裡：把 elif 往左退出函數，讓它成為獨立的頁面判斷！
-elif st.session_state.page == "market_index":
+    elif st.session_state.page == "market_index":
         if st.button("⬅ 返回工具箱"):
             go_to("home")
         
@@ -1022,6 +1022,40 @@ elif st.session_state.page == "market_index":
         st.markdown("<p style='color:#888;'>即時追蹤美股科技巨頭與台灣市場動向</p>", unsafe_allow_html=True)
         st.divider()
         
+        # ==============================================================
+        # --- 新增：專屬台指期的 Fugle API 抓取函式 ---
+        @st.cache_data(ttl=60)  # 設定 60 秒更新一次
+        def get_tw_future_fugle():
+            # 🔑 你的富果專屬金鑰
+            FUGLE_API_KEY = "8c74a744-8276-43de-b9ca-7b8a4a463e1a"
+            
+            if not FUGLE_API_KEY:
+                return None, None, None 
+
+            try:
+                # FITX 是台指期近月的通用代碼
+                url = "https://api.fugle.tw/marketdata/v1.0/stock/intraday/quote/FITX"
+                headers = {"X-API-KEY": FUGLE_API_KEY}
+                
+                # 發送請求給富果伺服器
+                response = requests.get(url, headers=headers, timeout=5)
+                data = response.json()
+                
+                # 解析富果回傳的 JSON 結構
+                if 'quote' in data:
+                    quote = data['quote']
+                    price = quote.get('close') or quote.get('lastPrice') # 最新成交價
+                    prev_close = quote.get('previousClose') # 昨收價
+                    
+                    if price and prev_close:
+                        change = price - prev_close
+                        pct = (change / prev_close) * 100
+                        return price, change, pct
+            except Exception as e:
+                return None, None, None
+                
+            return None, None, None
+        # ==============================================================
         
         # --- 建立一個抓取大盤資料的快取函式 (避免一直重複抓取被封鎖) ---
         @st.cache_data(ttl=300) # 每 5 分鐘更新一次
@@ -1083,15 +1117,25 @@ elif st.session_state.page == "market_index":
             if price:
                 st.metric(label="🇹🇼 台股加權指數", value=f"{price:,.2f}", delta=f"{change:+.2f} ({pct:+.2f}%)")
                 
-        # --- ⚠️ 台指期專屬區塊 (需依賴券商 API) ---
+        # --- ⚡ 台指期專屬區塊 (富果 API 連線) ---
         with col6:
-            # 這裡我們用一個客製化的卡片來預留位置，等待你未來接上富果或其他券商 API
-            st.markdown("""
-            <div style="padding: 10px; border-radius: 10px; background-color: rgba(255,165,0,0.1); border: 1px dashed orange;">
-                <h4 style="margin:0; color: orange;">⚡ 台指期 / 近全</h4>
-                <p style="font-size: 0.8rem; margin-top: 5px; color: #ccc;">
-                    (需串接券商 API 以取得即時報價)
-                </p>
-                <p style="margin:0; font-weight:bold;">等待連線中...</p>
-            </div>
-            """, unsafe_allow_html=True)
+            fut_price, fut_change, fut_pct = get_tw_future_fugle()
+            
+            # 如果成功抓到資料，就顯示漂亮的跳動數字卡片
+            if fut_price:
+                st.metric(
+                    label="⚡ 台指期 / 近全", 
+                    value=f"{fut_price:,.0f}", 
+                    delta=f"{fut_change:+.0f} ({fut_pct:+.2f}%)"
+                )
+            else:
+                # 如果還沒填金鑰，或是連線失敗，就顯示提示框
+                st.markdown("""
+                <div style="padding: 10px; border-radius: 10px; background-color: rgba(255,165,0,0.1); border: 1px dashed orange;">
+                    <h4 style="margin:0; color: orange;">⚡ 台指期 / 近全</h4>
+                    <p style="font-size: 0.8rem; margin-top: 5px; color: #ccc;">
+                        (尚未填寫 Fugle API Key 或連線失敗)
+                    </p>
+                    <p style="margin:0; font-weight:bold;">等待綁定中...</p>
+                </div>
+                """, unsafe_allow_html=True)
