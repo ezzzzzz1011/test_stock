@@ -1120,93 +1120,89 @@ elif st.session_state.page == "market_index":
                 """, unsafe_allow_html=True)
 
     # ==============================================================
-    # ⚖️ 頁面：投資成交記錄 (損益試算)
+    # ⚖️ 頁面：投資損益記帳 (精緻 Fugle 風格)
     # ==============================================================
-elif st.session_state.page == "trading":
+    elif st.session_state.page == "trading":
         if st.button("⬅ 返回"):
             go_to("home")
         
-        _, center_col, _ = st.columns([1, 4, 1])
+        # 限制最大寬度，讓介面像手機 APP 一樣緊湊精緻
+        _, center_col, _ = st.columns([1, 2.5, 1])
         
         with center_col:
-            st.markdown("### 📝 新增成交記錄")
+            st.markdown("<h2 style='text-align: center;'>📝 投資損益試算</h2>", unsafe_allow_html=True)
             
+            # --- 主卡片開始 ---
             with st.container(border=True):
-                # 1. 股票代號輸入 (自動補上 .TW)
-                raw_ticker = st.text_input("股票代號", value="2330").upper()
-                ticker = f"{raw_ticker}.TW" if "." not in raw_ticker else raw_ticker
+                # 1. 頂部：股票代號
+                t_input = st.text_input("🔍 股票代號", value="2330", help="輸入數字即可").upper()
+                ticker = f"{t_input}.TW" if "." not in t_input else t_input
+
+                # 2. 中間：買入設定 (雙欄)
+                c1, c2 = st.columns(2)
+                with c1:
+                    buy_p = st.number_input("買入價格", min_value=0.0, step=0.05, format="%.2f", value=600.0)
+                with c2:
+                    buy_q = st.number_input("買入張數 (0.x可)", min_value=0.001, step=0.1, format="%.3f", value=1.0)
                 
-                # 2. 買入資料
-                p_col1, p_col2 = st.columns(2)
-                with p_col1:
-                    buy_price = st.number_input("買入成交單價", min_value=0.0, step=0.05, format="%.2f")
-                with p_col2:
-                    buy_qty = st.number_input("買入張數 (0.1為100股)", min_value=0.001, value=1.0, step=0.1, format="%.3f")
-
-                st.divider()
-
-                # 3. 點擊按鈕開始計算
-                if st.button("🔍 計算目前損益", use_container_width=True, type="primary"):
+                st.markdown("<div style='margin: 10px 0;'></div>", unsafe_allow_html=True)
+                
+                # 3. 按鈕：執行計算
+                if st.button("🚀 開始計算損益", use_container_width=True, type="primary"):
                     try:
-                        # 抓取即時市價
-                        stock = yf.Ticker(ticker)
-                        current_data = stock.history(period="1d")
-                        
-                        if current_data.empty:
-                            st.error("找不到該股票資料，請檢查代號是否正確。")
-                        else:
-                            current_price = current_data['Close'].iloc[-1]
+                        with st.spinner('獲取市價中...'):
+                            stock = yf.Ticker(ticker)
+                            # 抓取最新成交價
+                            price_now = stock.fast_info['last_price']
                             
-                            # --- 計算邏輯 ---
+                            # --- 核心計算邏輯 ---
                             fee_rate = 0.003  # 手續費 0.3%
                             
-                            # 原始成本 = 買價 * 張數 * 1000
-                            raw_cost = buy_price * buy_qty * 1000
-                            # 買入手續費
+                            # A. 買入總成本 (買價 * 張數 * 1000 * (1 + 手續費))
+                            raw_cost = buy_p * buy_q * 1000
                             buy_fee = raw_cost * fee_rate
-                            # 總成本 (你要付出的錢)
                             total_cost = raw_cost + buy_fee
                             
-                            # 目前市值 = 現價 * 張數 * 1000
-                            current_market_value = current_price * buy_qty * 1000
-                            # 預估賣出手續費 (先計算出來讓損益更準確)
-                            sell_fee = current_market_value * fee_rate
-                            # 預估淨現值 (賣掉後拿回來的錢)
-                            net_value = current_market_value - sell_fee
+                            # B. 賣出淨現值 (現價 * 張數 * 1000 * (1 - 手續費))
+                            raw_market_val = price_now * buy_q * 1000
+                            sell_fee = raw_market_val * fee_rate
+                            net_value = raw_market_val - sell_fee
                             
-                            # 損益 = 淨現值 - 總成本
+                            # C. 最終損益
                             pnl = net_value - total_cost
-                            pnl_rate = (pnl / total_cost) * 100
+                            roi = (pnl / total_cost) * 100
                             
-                            # --- 顯示結果介面 ---
-                            st.markdown("#### 📊 損益試算報告")
+                            # --- 漂亮美觀的結果顯示 ---
+                            st.markdown("---")
                             
-                            res_c1, res_c2 = st.columns(2)
-                            res_c1.metric("買入成本", f"${total_cost:,.0f}")
-                            res_c2.metric("目前現價", f"${current_price:,.2f}")
-
-                            # 損益配色：台股習慣 紅賺綠賠
-                            pnl_color = "#ff4b4b" if pnl >= 0 else "#00ff00"
+                            # 損益配色：紅賺綠賠
+                            res_color = "#ff4b4b" if pnl >= 0 else "#00ff00"
+                            res_icon = "📈" if pnl >= 0 else "📉"
                             
+                            # 大數字顯示損益
                             st.markdown(f"""
-                            <div style="background: rgba(255,255,255,0.05); padding: 20px; border-radius: 12px; border-left: 5px solid {pnl_color};">
-                                <div style="font-size: 0.9rem; color: #aaa;">預估總損益 (含手續費)</div>
-                                <div style="font-size: 2rem; font-weight: bold; color: {pnl_color};">
-                                    {'+' if pnl >= 0 else ''}{pnl:,.0f}
+                                <div style="text-align: center; padding: 20px; background: rgba(255,255,255,0.05); border-radius: 15px;">
+                                    <p style="margin:0; color:#aaa; font-size:1rem;">預估損益 (含雙邊手續費)</p>
+                                    <h1 style="margin:10px 0; color:{res_color}; font-size:3rem;">{pnl:+,.0f}</h1>
+                                    <h3 style="margin:0; color:{res_color};">報酬率 {roi:+.2f}% {res_icon}</h3>
                                 </div>
-                                <div style="font-size: 1.1rem; color: {pnl_color};">
-                                    報酬率: {'+' if pnl >= 0 else ''}{pnl_rate:.2f}%
-                                </div>
-                            </div>
                             """, unsafe_allow_html=True)
                             
-                            # 詳細數據表格
-                            with st.expander("查看詳細試算"):
-                                st.write(f"股票標的: {ticker}")
-                                st.write(f"買入單價: {buy_price}")
-                                st.write(f"持有數量: {buy_qty} 張")
-                                st.write(f"預估買入手續費: ${buy_fee:,.0f}")
-                                st.write(f"預估賣出手續費: ${sell_fee:,.0f}")
-                                
+                            # 下方詳細小數據 (三欄排版)
+                            st.markdown("<br>", unsafe_allow_html=True)
+                            d1, d2, d3 = st.columns(3)
+                            with d1:
+                                st.caption("💰 總投入成本")
+                                st.write(f"**${total_cost:,.0f}**")
+                            with d2:
+                                st.caption("💹 目前市價")
+                                st.write(f"**${price_now:,.2f}**")
+                            with d3:
+                                st.caption("🛡️ 預估稅費")
+                                st.write(f"**${(buy_fee + sell_fee):,.0f}**")
+                            
                     except Exception as e:
-                        st.error(f"發生錯誤: {e}")
+                        st.error(f"無法抓取資料，請確認代號是否正確。")
+
+            # --- 腳註說明 ---
+            st.caption("※ 手續費以 0.3% 計算，已包含買入與賣出之預估成本。")
