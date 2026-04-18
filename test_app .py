@@ -467,7 +467,8 @@ if st.session_state.page == "welcome":
 elif st.session_state.page == "home":
         st.markdown("<br>", unsafe_allow_html=True)
         st.markdown("<h3 style='color: #888;'>請選擇功能進入：</h3>", unsafe_allow_html=True)
-        st.divider)
+        st.divider()
+
         # 👇 就是這行！必須先創造這 5 個欄位，下面才找得到 col_a
         col_a, col_b, col_c, col_d, col_e = st.columns(5)
 
@@ -490,9 +491,6 @@ elif st.session_state.page == "home":
         with col_e:
             st.markdown('<div class="feature-card"><div class="feature-title">🌐 大盤指數</div><div class="feature-desc">市場整體趨勢與氣氛</div></div>', unsafe_allow_html=True)
             if st.button("進入大盤指數", use_container_width=True, type="primary"): go_to("market_index")
-
-
-
 
 
 
