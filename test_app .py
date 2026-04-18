@@ -1025,7 +1025,7 @@ elif st.session_state.page == "watchlist":
 
 
     # ==============================================================
-    # 🌐 頁面：全球大盤與台指戰情室 (調整位置版)
+    # 🌐 頁面：全球大盤與台指戰情室 (精緻邊框版)
     # ==============================================================
 elif st.session_state.page == "market_index":
         if st.button("⬅ 返回工具箱"):
@@ -1052,14 +1052,14 @@ elif st.session_state.page == "market_index":
             except:
                 return None, None, None
 
-        # 定義 9 個指標 (已將台股與美債對調)
+        # 定義 9 個指標順序
         indices = {
             "🇺🇸 S&P 500": "^GSPC",
             "🇺🇸 道瓊工業": "^DJI",
             "🇺🇸 納斯達克": "^IXIC",
             "💻 費城半導體": "^SOX",
-            "🇺🇸 美10年債": "^TNX",    # 💡 移到第 5 位
-            "🇹🇼 台股加權": "^TWII",   # 💡 移到第 6 位
+            "🇺🇸 美10年債": "^TNX",
+            "🇹🇼 台股加權": "^TWII",
             "⚡ 台指期 / 近全": "WTX=F",
             "🛢️ 原油期貨": "CL=F",
             "💵 美元/台幣": "TWD=X"
@@ -1072,42 +1072,44 @@ elif st.session_state.page == "market_index":
         for i in range(3):
             name, tk_code = items[i]
             with row1[i]:
-                p, c, pct = get_market_data(tk_code)
-                if p:
-                    st.metric(label=name, value=f"{p:,.2f}", delta=f"{c:+.2f} ({pct:+.2f}%)", delta_color="inverse")
-
-        st.markdown("<br>", unsafe_allow_html=True)
+                # 👇 加入這個容器就會有框框
+                with st.container(border=True):
+                    p, c, pct = get_market_data(tk_code)
+                    if p:
+                        st.metric(label=name, value=f"{p:,.2f}", delta=f"{c:+.2f} ({pct:+.2f}%)", delta_color="inverse")
 
         # --- 第二排 (4~6: 費半、美債、台股加權) ---
         row2 = st.columns(3)
         for i in range(3, 6):
             name, tk_code = items[i]
             with row2[i-3]:
-                p, c, pct = get_market_data(tk_code)
-                if p:
-                    # 美債顯示 3 位小數，其餘 2 位
-                    val = f"{p:.3f}%" if tk_code == "^TNX" else f"{p:,.2f}"
-                    st.metric(label=name, value=val, delta=f"{c:+.2f} ({pct:+.2f}%)", delta_color="inverse")
-
-        st.markdown("<br>", unsafe_allow_html=True)
+                # 👇 加入這個容器就會有框框
+                with st.container(border=True):
+                    p, c, pct = get_market_data(tk_code)
+                    if p:
+                        val = f"{p:.3f}%" if tk_code == "^TNX" else f"{p:,.2f}"
+                        st.metric(label=name, value=val, delta=f"{c:+.2f} ({pct:+.2f}%)", delta_color="inverse")
 
         # --- 第三排 (7~9: 台指、原油、匯率) ---
         row3 = st.columns(3)
         
-        # 1. 台指期
+        # 7. 台指期
         with row3[0]:
-            p, c, pct = get_market_data("WTX=F")
-            p, c, pct = (p, c, pct) if p else (37742, 664, 1.79)
-            st.metric(label="⚡ 台指期 / 近全", value=f"{p:,.0f}", delta=f"{c:+.0f} ({pct:+.2f}%)", delta_color="inverse")
+            with st.container(border=True):
+                p, c, pct = get_market_data("WTX=F")
+                p, c, pct = (p, c, pct) if p else (37742, 664, 1.79)
+                st.metric(label="⚡ 台指期 / 近全", value=f"{p:,.0f}", delta=f"{c:+.0f} ({pct:+.2f}%)", delta_color="inverse")
 
-        # 2. 原油期貨
+        # 8. 原油期貨
         with row3[1]:
-            p, c, pct = get_market_data("CL=F")
-            p, c, pct = (p, c, pct) if p else (82.59, -8.58, -9.41)
-            st.metric(label="🛢️ 原油期貨", value=f"{p:,.2f}", delta=f"{c:+.2f} ({pct:+.2f}%)", delta_color="inverse")
+            with st.container(border=True):
+                p, c, pct = get_market_data("CL=F")
+                p, c, pct = (p, c, pct) if p else (82.59, -8.58, -9.41)
+                st.metric(label="🛢️ 原油期貨", value=f"{p:,.2f}", delta=f"{c:+.2f} ({pct:+.2f}%)", delta_color="inverse")
 
-        # 3. 美元/台幣
+        # 9. 美元/台幣
         with row3[2]:
-            p, c, pct = get_market_data("TWD=X")
-            p, c, pct = (p, c, pct) if p else (31.46, -0.09, -0.29)
-            st.metric(label="💵 美元/台幣", value=f"{p:,.2f}", delta=f"{c:+.2f} ({pct:+.2f}%)", delta_color="inverse")
+            with st.container(border=True):
+                p, c, pct = get_market_data("TWD=X")
+                p, c, pct = (p, c, pct) if p else (31.46, -0.09, -0.29)
+                st.metric(label="💵 美元/台幣", value=f"{p:,.2f}", delta=f"{c:+.2f} ({pct:+.2f}%)", delta_color="inverse")
