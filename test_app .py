@@ -993,19 +993,24 @@ elif st.session_state.page == "watchlist":
             now_tw = datetime.now(tw_tz).strftime('%H:%M:%S')
             st.caption(f"⏱️ 行情自動刷新中... ({now_tw})")
             
-            # --- 修改關注清單內的顏色定義 ---
-for code in st.session_state.watchlist_data:
-    item = get_stock_info(code)
-    if item:
-        c1, c2, c3, c4 = st.columns([2, 2, 2, 1])
-        
-        # 💡 修正這裡：漲(>0) 用紅色 #ff4b4b，跌(<0) 用綠色 #00ff00
-        color = "#ff4b4b" if item['change'] > 0 else "#00ff00" if item['change'] < 0 else "#cccccc"
-        
-        c1.markdown(f"**{item['name']}** <span style='color:#aaa; font-size:0.9em;'>({item['full_ticker']})</span>", unsafe_allow_html=True)
-        c2.markdown(f"<span style='color:{color}; font-size:1.3rem; font-weight:bold;'>{item['price']:.2f}</span>", unsafe_allow_html=True)
-        c3.markdown(f"<span style='color:{color};'>{item['change']:+.2f} ({item['pct']:+.2f}%)</span>", unsafe_allow_html=True)
+            for code in st.session_state.watchlist_data:
+                item = get_stock_info(code)
+                if item:
+                    c1, c2, c3, c4 = st.columns([2, 2, 2, 1])
                     
+                    # 💡 這裡已經改成：紅漲、綠跌、灰平盤
+                    if item['change'] > 0:
+                        color = "#ff4b4b" # 紅
+                    elif item['change'] < 0:
+                        color = "#00ff00" # 綠
+                    else:
+                        color = "#cccccc" # 灰
+                    
+                    c1.markdown(f"**{item['name']}** <span style='color:#aaa; font-size:0.9em;'>({item['full_ticker']})</span>", unsafe_allow_html=True)
+                    c2.markdown(f"<span style='color:{color}; font-size:1.3rem; font-weight:bold;'>{item['price']:.2f}</span>", unsafe_allow_html=True)
+                    c3.markdown(f"<span style='color:{color};'>{item['change']:+.2f} ({item['pct']:+.2f}%)</span>", unsafe_allow_html=True)
+                    
+                    # 👇 這裡的縮排我幫你對齊好了，不能多也不能少
                     if c4.button("刪除", key=f"del_{item['full_ticker']}"):
                         try:
                             st.session_state.watchlist_data.remove(item['full_ticker'])
@@ -1013,7 +1018,8 @@ for code in st.session_state.watchlist_data:
                             pass
                         save_watchlist_to_cloud(st.session_state.watchlist_data)
                         st.rerun()
-                st.markdown("<hr style='margin-top: -15px; margin-bottom: 10px; border: none; border-top: 1px solid rgba(128, 128, 128, 0.3);'>", unsafe_allow_html=True)
+                    
+                    st.markdown("<hr style='margin-top: -15px; margin-bottom: 10px; border: none; border-top: 1px solid rgba(128, 128, 128, 0.3);'>", unsafe_allow_html=True)
         else:
             st.info("清單空空如也，請在上方新增標的。")
 
