@@ -1010,15 +1010,22 @@ elif st.session_state.page == "watchlist":
                         save_watchlist_to_cloud(st.session_state.watchlist_data)
                         st.rerun()
                     st.markdown("<hr style='margin-top: -15px; margin-bottom: 10px; border: none; border-top: 1px solid rgba(128, 128, 128, 0.3);'>", unsafe_allow_html=True)
+        # ... 這是關注清單裡面的程式碼
+        else:
+            st.info("清單空空如也，請在上方新增標的。")
+            # ... 這是關注清單裡面的程式碼
         else:
             st.info("清單空空如也，請在上方新增標的。")
 
+# 👇 把它往左退！要跟其他控制頁面的 elif 對齊在同一條垂直線上
+elif st.session_state.page == "market_index":
+    if st.button("⬅ 返回工具箱"):
+        go_to("home")
+    
+    st.markdown("<h1>🌐 全球大盤與台指戰情室</h1>", unsafe_allow_html=True)
+    # ... (下面接續大盤戰情室的程式碼)
 
-    elif st.session_state.page == "market_index":
-        if st.button("⬅ 返回工具箱"):
-            go_to("home")
-            
-        st.markdown("<h1>🌐 全球大盤與台指戰情室</h1>", unsafe_allow_html=True)
+
         st.markdown("<p style='color:#888;'>即時追蹤美股科技巨頭與台灣市場動向</p>", unsafe_allow_html=True)
         st.divider()
         
