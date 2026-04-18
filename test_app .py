@@ -1120,89 +1120,112 @@ elif st.session_state.page == "market_index":
                 """, unsafe_allow_html=True)
 
     # ==============================================================
-    # ⚖️ 頁面：投資損益記帳 (精緻 Fugle 風格)
+    # ⚖️ 頁面：投資帳簿與實戰紀錄
     # ==============================================================
 elif st.session_state.page == "trading":
-        if st.button("⬅ 返回"):
+        if st.button("⬅ 返回工具箱"):
             go_to("home")
         
-        # 限制最大寬度，讓介面像手機 APP 一樣緊湊精緻
-        _, center_col, _ = st.columns([1, 2.5, 1])
+        # --- 1. 初始化交易紀錄儲存空間 ---
+        if 'trade_history' not in st.session_state:
+            st.session_state.trade_history = []
+
+        # 介面佈局：左邊輸入，右邊顯示紀錄 (或是上下排版)
+        st.markdown("<h2 style='text-align: center;'>⚖️ 投資交易帳簿</h2>", unsafe_allow_html=True)
         
-        with center_col:
-            st.markdown("<h2 style='text-align: center;'>📝 投資損益試算</h2>", unsafe_allow_html=True)
+        # --- 2. 新增紀錄區 ---
+        with st.container(border=True):
+            st.markdown("#### ➕ 新增成交紀錄")
+            c1, c2, c3 = st.columns([1.5, 1, 1])
+            with c1:
+                t_in = st.text_input("股票代號", value="2330", key="trade_ticker").upper()
+                ticker = f"{t_in}.TW" if "." not in t_in else t_in
+            with c2:
+                buy_p = st.number_input("成交單價", min_value=0.0, step=0.05, format="%.2f", value=600.0)
+            with c3:
+                buy_q = st.number_input("成交張數", min_value=0.001, step=0.1, format="%.3f", value=1.0)
             
-            # --- 主卡片開始 ---
-            with st.container(border=True):
-                # 1. 頂部：股票代號
-                t_input = st.text_input("🔍 股票代號", value="2330", help="輸入數字即可").upper()
-                ticker = f"{t_input}.TW" if "." not in t_input else t_input
+            if st.button("📥 新增至交易紀錄", use_container_width=True, type="primary"):
+                # 計算買入成本 (含0.3%手續費)
+                fee_rate = 0.003
+                cost_raw = buy_p * buy_q * 1000
+                buy_fee = cost_raw * fee_rate
+                total_cost = cost_raw + buy_fee
+                
+                # 存入 session_state
+                new_record = {
+                    "ticker": ticker,
+                    "buy_p": buy_p,
+                    "buy_q": buy_q,
+                    "total_cost": total_cost,
+                    "time": datetime.now().strftime("%Y-%m-%d %H:%M")
+                }
+                st.session_state.trade_history.append(new_record)
+                st.success(f"✅ {ticker} 已加入紀錄")
+                st.rerun()
 
-                # 2. 中間：買入設定 (雙欄)
-                c1, c2 = st.columns(2)
-                with c1:
-                    buy_p = st.number_input("買入價格", min_value=0.0, step=0.05, format="%.2f", value=600.0)
-                with c2:
-                    buy_q = st.number_input("買入張數 (0.x可)", min_value=0.001, step=0.1, format="%.3f", value=1.0)
-                
-                st.markdown("<div style='margin: 10px 0;'></div>", unsafe_allow_html=True)
-                
-                # 3. 按鈕：執行計算
-                if st.button("🚀 開始計算損益", use_container_width=True, type="primary"):
+        st.markdown("<br>", unsafe_allow_html=True)
+
+        # --- 3. 交易紀錄列表與彙整計算 ---
+        if st.session_state.trade_history:
+            st.markdown("#### 📜 交易紀錄彙整")
+            
+            total_portfolio_pnl = 0
+            total_portfolio_cost = 0
+            
+            # 建立表格顯示
+            for i, record in enumerate(st.session_state.trade_history):
+                with st.container(border=True):
+                    # 每一筆紀錄自動去抓現價
                     try:
-                        with st.spinner('獲取市價中...'):
-                            stock = yf.Ticker(ticker)
-                            # 抓取最新成交價
-                            price_now = stock.fast_info['last_price']
-                            
-                            # --- 核心計算邏輯 ---
-                            fee_rate = 0.003  # 手續費 0.3%
-                            
-                            # A. 買入總成本 (買價 * 張數 * 1000 * (1 + 手續費))
-                            raw_cost = buy_p * buy_q * 1000
-                            buy_fee = raw_cost * fee_rate
-                            total_cost = raw_cost + buy_fee
-                            
-                            # B. 賣出淨現值 (現價 * 張數 * 1000 * (1 - 手續費))
-                            raw_market_val = price_now * buy_q * 1000
-                            sell_fee = raw_market_val * fee_rate
-                            net_value = raw_market_val - sell_fee
-                            
-                            # C. 最終損益
-                            pnl = net_value - total_cost
-                            roi = (pnl / total_cost) * 100
-                            
-                            # --- 漂亮美觀的結果顯示 ---
-                            st.markdown("---")
-                            
-                            # 損益配色：紅賺綠賠
-                            res_color = "#ff4b4b" if pnl >= 0 else "#00ff00"
-                            res_icon = "📈" if pnl >= 0 else "📉"
-                            
-                            # 大數字顯示損益
-                            st.markdown(f"""
-                                <div style="text-align: center; padding: 20px; background: rgba(255,255,255,0.05); border-radius: 15px;">
-                                    <p style="margin:0; color:#aaa; font-size:1rem;">預估損益 (含雙邊手續費)</p>
-                                    <h1 style="margin:10px 0; color:{res_color}; font-size:3rem;">{pnl:+,.0f}</h1>
-                                    <h3 style="margin:0; color:{res_color};">報酬率 {roi:+.2f}% {res_icon}</h3>
-                                </div>
-                            """, unsafe_allow_html=True)
-                            
-                            # 下方詳細小數據 (三欄排版)
-                            st.markdown("<br>", unsafe_allow_html=True)
-                            d1, d2, d3 = st.columns(3)
-                            with d1:
-                                st.caption("💰 總投入成本")
-                                st.write(f"**${total_cost:,.0f}**")
-                            with d2:
-                                st.caption("💹 目前市價")
-                                st.write(f"**${price_now:,.2f}**")
-                            with d3:
-                                st.caption("🛡️ 預估稅費")
-                                st.write(f"**${(buy_fee + sell_fee):,.0f}**")
-                            
-                    except Exception as e:
-                        st.error(f"無法抓取資料，請確認代號是否正確。")
+                        stock = yf.Ticker(record['ticker'])
+                        # 為了效能，我們抓取 fast_info
+                        current_p = stock.fast_info['last_price']
+                    except:
+                        current_p = record['buy_p'] # 抓不到就用買價代替
 
-            # --- 腳註說明 ---
-            st.caption("※ 手續費以 0.3% 計算，已包含買入與賣出之預估成本。")
+                    # 計算單筆損益
+                    market_val = current_p * record['buy_q'] * 1000
+                    sell_fee = market_val * 0.003
+                    net_val = market_val - sell_fee
+                    pnl = net_val - record['total_cost']
+                    roi = (pnl / record['total_cost']) * 100
+                    
+                    # 累加到總資產
+                    total_portfolio_pnl += pnl
+                    total_portfolio_cost += record['total_cost']
+
+                    # 顯示介面
+                    r_col1, r_col2, r_col3, r_col4 = st.columns([1.5, 1.5, 2, 0.5])
+                    with r_col1:
+                        st.markdown(f"**{record['ticker']}**")
+                        st.caption(f"買入: {record['buy_p']} ({record['buy_q']}張)")
+                    with r_col2:
+                        st.markdown(f"現價: **{current_p:,.2f}**")
+                        st.caption(f"成本: ${record['total_cost']:,.0f}")
+                    with r_col3:
+                        p_color = "#ff4b4b" if pnl >= 0 else "#00ff00"
+                        st.markdown(f"<span style='color:{p_color}; font-size:1.2rem; font-weight:bold;'>{pnl:+,.0f} ({roi:+.2f}%)</span>", unsafe_allow_html=True)
+                    with r_col4:
+                        if st.button("🗑️", key=f"del_{i}"):
+                            st.session_state.trade_history.pop(i)
+                            st.rerun()
+
+            # --- 4. 底部：總損益總計 ---
+            st.markdown("---")
+            summary_color = "#ff4b4b" if total_portfolio_pnl >= 0 else "#00ff00"
+            total_roi = (total_portfolio_pnl / total_portfolio_cost * 100) if total_portfolio_cost > 0 else 0
+            
+            st.markdown(f"""
+                <div style="background: rgba(255,255,255,0.05); padding: 20px; border-radius: 15px; text-align: center; border: 1px solid #444;">
+                    <p style="margin:0; color:#aaa;">總投資組合損益 (已含雙邊手續費)</p>
+                    <h1 style="margin:10px 0; color:{summary_color};">{total_portfolio_pnl:+,.0f}</h1>
+                    <h3 style="margin:0; color:{summary_color};">總報酬率 {total_roi:+.2f}%</h3>
+                </div>
+            """, unsafe_allow_html=True)
+            
+            if st.button("🧹 清空所有紀錄"):
+                st.session_state.trade_history = []
+                st.rerun()
+        else:
+            st.info("目前尚無紀錄，請在上方新增您的第一筆成交資料。")
