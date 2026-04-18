@@ -1025,7 +1025,7 @@ elif st.session_state.page == "watchlist":
 
 
     # ==============================================================
-    # 🌐 頁面：全球大盤與台指戰情室 (新增台指近全強化版)
+    # 🌐 頁面：全球大盤與台指戰情室 (標準化排版)
     # ==============================================================
 elif st.session_state.page == "market_index":
         if st.button("⬅ 返回工具箱"):
@@ -1039,7 +1039,6 @@ elif st.session_state.page == "market_index":
         def get_market_data(ticker):
             try:
                 tk = yf.Ticker(ticker)
-                # 使用 fast_info 確保週末也能抓到最後收盤價
                 current_p = tk.fast_info['last_price']
                 prev_p = tk.fast_info['previous_close']
                 
@@ -1053,51 +1052,57 @@ elif st.session_state.page == "market_index":
             except:
                 return None, None, None
 
-        # --- 📈 國際指數區 (3x2 佈局) ---
+        # 定義 7 個指標 (包含台指期)
         indices = {
-            "🇺🇸 S&P 500": "^GSPC", "🇺🇸 道瓊工業": "^DJI", "🇺🇸 納斯達克": "^IXIC",
-            "💻 費城半導體": "^SOX", "🇹🇼 台股加權": "^TWII", "🇺🇸 美10年債": "^TNX"
+            "🇺🇸 S&P 500": "^GSPC",
+            "🇺🇸 道瓊工業": "^DJI",
+            "🇺🇸 納斯達克": "^IXIC",
+            "💻 費城半導體": "^SOX",
+            "🇹🇼 台股加權": "^TWII",
+            "🇺🇸 美10年債": "^TNX",
+            "⚡ 台指期 / 近全": "WTX=F"
         }
         
         items = list(indices.items())
-        row1_cols = st.columns(3)
-        row2_cols = st.columns(3)
         
-        for i in range(6):
-            target_col = row1_cols[i] if i < 3 else row2_cols[i-3]
+        # --- 第一排 (1~3) ---
+        row1 = st.columns(3)
+        for i in range(3):
             name, tk_code = items[i]
-            with target_col:
+            with row1[i]:
                 p, c, pct = get_market_data(tk_code)
                 if p:
-                    val = f"{p:.3f}%" if tk_code == "^TNX" else f"{p:,.2f}"
+                    val = f"{p:,.2f}"
                     st.metric(label=name, value=val, delta=f"{c:+.2f} ({pct:+.2f}%)", delta_color="inverse")
-                else:
-                    st.metric(label=name, value="暫無資料", delta="-")
 
         st.markdown("<br>", unsafe_allow_html=True)
 
-        # --- 🎯 這裡是你要新增的：台指近全 (專屬大型卡片) ---
-        st.subheader("🔥 期貨即時戰情")
-        
-        # 💡 這裡手動模擬你截圖中的數值，或你可以串接真正的期貨 API
-        # 目前先用 Yahoo 的台指期代碼 'WTX=F' 作為示範抓取
-        fut_p, fut_c, fut_pct = get_market_data("WTX=F")
-        
-        # 如果 Yahoo 抓不到，我們用你截圖中的數值 (37742, +664, +1.79%)
-        display_p = fut_p if fut_p else 37742
-        display_c = fut_c if fut_c else 664
-        display_pct = fut_pct if fut_pct else 1.79
+        # --- 第二排 (4~6) ---
+        row2 = st.columns(3)
+        for i in range(3, 6):
+            name, tk_code = items[i]
+            with row2[i-3]:
+                p, c, pct = get_market_data(tk_code)
+                if p:
+                    # 美債顯示 3 位小數 + %
+                    val = f"{p:.3f}%" if tk_code == "^TNX" else f"{p:,.2f}"
+                    st.metric(label=name, value=val, delta=f"{c:+.2f} ({pct:+.2f}%)", delta_color="inverse")
 
-        # 使用自定義 HTML 製作出跟截圖一樣專業的長條橫幅
-        st.markdown(f"""
-            <div style="background: rgba(255, 75, 75, 0.1); padding: 20px; border-radius: 15px; border: 1px solid #ff4b4b; display: flex; justify-content: space-between; align-items: center;">
-                <div>
-                    <h3 style="margin:0; color: #ff4b4b;">⚡ 台指近全 (全天盤)</h3>
-                    <p style="margin:0; color: #888; font-size: 0.9rem;">最後更新：{datetime.now().strftime('%Y-%m-%d %H:%M')}</p>
-                </div>
-                <div style="text-align: right;">
-                    <h1 style="margin:0; color: #ff4b4b; font-size: 2.5rem;">{display_p:,.0f}</h1>
-                    <h3 style="margin:0; color: #ff4b4b;">▲ {display_c:+.0f} ({display_pct:+.2f}%)</h3>
-                </div>
-            </div>
-        """, unsafe_allow_html=True)
+        st.markdown("<br>", unsafe_allow_html=True)
+
+        # --- 第三排 (台指期單獨在這一排) ---
+        row3 = st.columns(3)
+        with row3[0]: # 放在第三排的第一個位置
+            name, tk_code = items[6]
+            p, c, pct = get_market_data(tk_code)
+            
+            # 💡 週末防呆：如果 Yahoo 抓不到 (顯示 None)，就用你圖中的 37742 數值
+            if p is None:
+                p, c, pct = 37742, 664, 1.79
+            
+            st.metric(
+                label=name, 
+                value=f"{p:,.0f}", 
+                delta=f"{c:+.0f} ({pct:+.2f}%)", 
+                delta_color="inverse"
+            )
