@@ -446,7 +446,7 @@ if st.session_state.page == "welcome":
 elif st.session_state.page == "home":
     st.markdown("<h3 style='color: #333;'>請選擇功能進入：</h3>", unsafe_allow_html=True)
     st.divider()
-    col_a, col_b, col_c, col_d = st.columns(4)
+    col1, col2, col3, col4, col5 = st.columns(5)
     with col_a:
         st.markdown('<div class="feature-card"><div class="feature-title">📈 個股分析</div><div class="feature-desc">個股查詢與估價</div></div>', unsafe_allow_html=True)
         if st.button("進入個股分析", use_container_width=True, type="primary"): go_to("stock_query")
@@ -459,6 +459,11 @@ elif st.session_state.page == "home":
     with col_d:
         st.markdown('<div class="feature-card"><div class="feature-title">💼 我的資產</div><div class="feature-desc">個人投資組合</div></div>', unsafe_allow_html=True)
         if st.button("進入我的資產", use_container_width=True, type="primary"): go_to("portfolio")
+    with col_e:
+         st.markdown('<div class="feature-card"><div class="feature-title">🌐 大盤指數</div><div class="feature-desc">市場整體趨勢與氣氛</div></div>', unsafe_allow_html=True)
+         if st.button("進入大盤指數", use_container_width=True, type="primary"): go_to("market_index")
+
+
 
 elif st.session_state.page == "stock_query":
     if st.button("⬅️ 返回工具箱"): go_to("home")
