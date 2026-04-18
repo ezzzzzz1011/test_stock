@@ -1096,4 +1096,4 @@ elif st.session_state.page == "market_index":
             </div>
             """, unsafe_allow_html=True)
 
-refresh_watchlist_view()
+        refresh_watchlist_view()
