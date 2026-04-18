@@ -1120,55 +1120,76 @@ elif st.session_state.page == "market_index":
                 """, unsafe_allow_html=True)
 
     # ==============================================================
-    # ⚖️ 頁面：實戰下單交易
+    # ⚖️ 頁面：實戰下單交易 (Fugle 精簡版)
     # ==============================================================
 elif st.session_state.page == "trading":
-        if st.button("⬅ 返回工具箱"):
+        if st.button("⬅ 返回"):
             go_to("home")
         
-        st.markdown("<h1>⚖️ 實戰下單委託</h1>", unsafe_allow_html=True)
-        st.markdown("<p style='color:#888;'>請確認標的與委託條件後送出</p>", unsafe_allow_html=True)
-        st.divider()
-
-        # 建立下單容器
-        with st.container(border=True):
-            current_ticker = st.session_state.get('last_searched_ticker', '2330.TW')
-            st.subheader(f"🎯 標的：{current_ticker}")
+        # 讓整個面板寬度不要太大，置中顯示
+        _, center_col, _ = st.columns([1, 4, 1])
+        
+        with center_col:
+            st.markdown("### ⚖️ 下單委託")
             
-            # 第一列：交易類別 與 買賣別
-            col_a, col_b = st.columns(2)
-            with col_a:
-                trade_cat = st.radio("交易類別", ["現股", "融資", "融券"], horizontal=True)
-            with col_b:
-                side = st.radio("買賣別", ["買進", "賣出"], horizontal=True)
+            with st.container(border=True):
+                # 1. 股票代號輸入
+                default_ticker = st.session_state.get('last_searched_ticker', '2330').split('.')[0]
+                trade_ticker = st.text_input("股票代號", value=default_ticker)
+                
+                # 2. 買賣別切換 (仿按鈕式)
+                side = st.radio("買賣別", ["買進", "賣出"], horizontal=True, label_visibility="collapsed")
+                
+                # 根據買賣設定顏色
+                theme_color = "#ff4b4b" if side == "買進" else "#00ff00"
+                st.markdown(f"""<style>div.stRadio > div {{ border: 2px solid {theme_color}; border-radius: 5px; padding: 2px; }}</style>""", unsafe_allow_html=True)
 
-            st.markdown("<br>", unsafe_allow_html=True)
+                st.markdown("<br>", unsafe_allow_html=True)
 
-            # 第二列：價格類型 與 委託種類
-            col_c, col_d = st.columns(2)
-            with col_c:
-                price_type = st.radio("價格類型", ["限價", "市價", "收盤"], horizontal=True)
-            with col_d:
-                order_cond = st.radio("委託種類", ["ROD", "IOC", "FOK"], horizontal=True)
+                # 3. 類別與種類
+                t_col1, t_col2 = st.columns(2)
+                with t_col1:
+                    trade_type = st.radio("類別", ["現股", "融資", "融券"], horizontal=True)
+                with t_col2:
+                    order_cond = st.radio("種類", ["ROD", "IOC", "FOK"], horizontal=True)
 
-            st.markdown("<hr style='margin: 15px 0; border-color: #444;'>", unsafe_allow_html=True)
+                st.divider()
 
-            # 第三列：價格與數量輸入
-            col_e, col_f = st.columns(2)
-            with col_e:
-                order_price = st.number_input("委託價格", value=0.0, format="%.2f", step=0.05)
-            with col_f:
-                order_qty = st.number_input("委託數量 (張)", min_value=1, value=1, step=1)
+                # 4. 價格與張數 (支援 0.x 張)
+                p_col1, p_col2 = st.columns(2)
+                with p_col1:
+                    trade_price = st.number_input("委託價格", value=0.0, step=0.05, format="%.2f")
+                with p_col2:
+                    # 💡 step=0.001 讓你可以輸入 0.1 或 0.05
+                    trade_qty = st.number_input("張數 (0.1為100股)", value=1.0, step=0.1, format="%.3f")
 
-            total_estimate = order_price * order_qty * 1000
-            st.caption(f"💰 預估委託金額 (不含手續費): ${total_estimate:,.0f}")
-            st.markdown("<br>", unsafe_allow_html=True)
+                # 5. 金額試算邏輯
+                gross_amount = trade_price * trade_qty * 1000
+                fee_rate = 0.003  # 大廚要求的手續費 0.3%
+                fees = gross_amount * fee_rate
+                
+                # 買進加手續費，賣出減手續費 (這裡先顯示預估總額)
+                total_final = (gross_amount + fees) if side == "買進" else (gross_amount - fees)
 
-            # 送出按鈕 (買紅賣綠)
-            btn_label = f"🚀 送出 {side} 委託"
-            if st.button(btn_label, use_container_width=True, type="primary"):
-                st.success(f"已送出委託：{trade_cat} | {side} | {current_ticker} | {order_price} | {order_qty}張")
-                st.balloons()
+                # 顯示試算結果清單
+                st.markdown(f"""
+                <div style="background: rgba(255,255,255,0.05); padding: 15px; border-radius: 10px; font-size: 0.9rem;">
+                    <div style="display:flex; justify-content:space-between;"><span>預估金額:</span> <span>${gross_amount:,.0f}</span></div>
+                    <div style="display:flex; justify-content:space-between; color: #aaa;"><span>手續費 (0.3%):</span> <span>${fees:,.0f}</span></div>
+                    <hr style="margin: 8px 0; border-color: #444;">
+                    <div style="display:flex; justify-content:space-between; font-weight:bold; font-size:1.1rem; color:{theme_color};">
+                        <span>{'應付金額' if side == '買進' else '實收金額'}:</span> 
+                        <span>${total_final:,.0f}</span>
+                    </div>
+                </div>
+                """, unsafe_allow_html=True)
+
+                st.markdown("<br>", unsafe_allow_html=True)
+
+                # 6. 下單按鈕
+                if st.button(f"確認 {side} {trade_ticker}", use_container_width=True, type="primary"):
+                    st.success(f"已送出委託：{trade_ticker} {side} {trade_qty} 張，價格 {trade_price}")
+                    st.balloons()
 
         st.markdown("<br>", unsafe_allow_html=True)
         with st.expander("📝 今日委託回報"):
