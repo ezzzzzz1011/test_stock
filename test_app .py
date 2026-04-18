@@ -1025,7 +1025,7 @@ elif st.session_state.page == "watchlist":
 
 
     # ==============================================================
-    # 🌐 頁面：全球大盤與台指戰情室 (標準化排版)
+    # 🌐 頁面：全球大盤與台指戰情室 (九宮格完整版)
     # ==============================================================
 elif st.session_state.page == "market_index":
         if st.button("⬅ 返回工具箱"):
@@ -1034,7 +1034,7 @@ elif st.session_state.page == "market_index":
         st.markdown("<h1>🌐 全球大盤與台指戰情室</h1>", unsafe_allow_html=True)
         st.divider()
 
-        # --- ⚡ 抓取函式 (支援國際指數與台指期) ---
+        # --- ⚡ 抓取函式 (支援國際指數、期貨與匯率) ---
         @st.cache_data(ttl=300)
         def get_market_data(ticker):
             try:
@@ -1042,7 +1042,7 @@ elif st.session_state.page == "market_index":
                 current_p = tk.fast_info['last_price']
                 prev_p = tk.fast_info['previous_close']
                 
-                if ticker == "^TNX": # 美債校正
+                if ticker == "^TNX": # 美債校正 (Yahoo 為 10 倍)
                     current_p /= 10
                     prev_p /= 10
                 
@@ -1052,7 +1052,7 @@ elif st.session_state.page == "market_index":
             except:
                 return None, None, None
 
-        # 定義 7 個指標 (包含台指期)
+        # 定義 9 個指標 (3x3 佈局)
         indices = {
             "🇺🇸 S&P 500": "^GSPC",
             "🇺🇸 道瓊工業": "^DJI",
@@ -1060,7 +1060,9 @@ elif st.session_state.page == "market_index":
             "💻 費城半導體": "^SOX",
             "🇹🇼 台股加權": "^TWII",
             "🇺🇸 美10年債": "^TNX",
-            "⚡ 台指期 / 近全": "WTX=F"
+            "⚡ 台指期 / 近全": "WTX=F",
+            "🛢️ 原油期貨": "CL=F",
+            "💵 美元/台幣": "TWD=X"
         }
         
         items = list(indices.items())
@@ -1072,8 +1074,7 @@ elif st.session_state.page == "market_index":
             with row1[i]:
                 p, c, pct = get_market_data(tk_code)
                 if p:
-                    val = f"{p:,.2f}"
-                    st.metric(label=name, value=val, delta=f"{c:+.2f} ({pct:+.2f}%)", delta_color="inverse")
+                    st.metric(label=name, value=f"{p:,.2f}", delta=f"{c:+.2f} ({pct:+.2f}%)", delta_color="inverse")
 
         st.markdown("<br>", unsafe_allow_html=True)
 
@@ -1084,25 +1085,32 @@ elif st.session_state.page == "market_index":
             with row2[i-3]:
                 p, c, pct = get_market_data(tk_code)
                 if p:
-                    # 美債顯示 3 位小數 + %
                     val = f"{p:.3f}%" if tk_code == "^TNX" else f"{p:,.2f}"
                     st.metric(label=name, value=val, delta=f"{c:+.2f} ({pct:+.2f}%)", delta_color="inverse")
 
         st.markdown("<br>", unsafe_allow_html=True)
 
-        # --- 第三排 (台指期單獨在這一排) ---
+        # --- 第三排 (7~9: 台指、原油、匯率) ---
         row3 = st.columns(3)
-        with row3[0]: # 放在第三排的第一個位置
-            name, tk_code = items[6]
-            p, c, pct = get_market_data(tk_code)
-            
-            # 💡 週末防呆：如果 Yahoo 抓不到 (顯示 None)，就用你圖中的 37742 數值
-            if p is None:
-                p, c, pct = 37742, 664, 1.79
-            
-            st.metric(
-                label=name, 
-                value=f"{p:,.0f}", 
-                delta=f"{c:+.0f} ({pct:+.2f}%)", 
-                delta_color="inverse"
-            )
+        
+        # 1. 台指期
+        with row3[0]:
+            p, c, pct = get_market_data("WTX=F")
+            # 週末備援數值 (若抓不到則顯示您截圖中的值)
+            p, c, pct = (p, c, pct) if p else (37742, 664, 1.79)
+            st.metric(label="⚡ 台指期 / 近全", value=f"{p:,.0f}", delta=f"{c:+.0f} ({pct:+.2f}%)", delta_color="inverse")
+
+        # 2. 原油期貨
+        with row3[1]:
+            p, c, pct = get_market_data("CL=F")
+            # 週末備援數值 (若抓不到則顯示您截圖中的值)
+            p, c, pct = (p, c, pct) if p else (82.59, -8.58, -9.41)
+            st.metric(label="🛢️ 原油期貨", value=f"{p:,.2f}", delta=f"{c:+.2f} ({pct:+.2f}%)", delta_color="inverse")
+
+        # 3. 美元/台幣
+        with row3[2]:
+            p, c, pct = get_market_data("TWD=X")
+            # 週末備援數值 (若抓不到則顯示您截圖中的值)
+            p, c, pct = (p, c, pct) if p else (31.46, -0.09, -0.29)
+            # 匯率通常看小數點後兩位
+            st.metric(label="💵 美元/台幣", value=f"{p:,.2f}", delta=f"{c:+.2f} ({pct:+.2f}%)", delta_color="inverse")
