@@ -1014,7 +1014,7 @@ elif st.session_state.page == "watchlist":
             st.info("清單空空如也，請在上方新增標的。")
 
     # 👇 🚨 魔法在這裡：把 elif 往左退出函數，讓它成為獨立的頁面判斷！
-    elif st.session_state.page == "market_index":
+elif st.session_state.page == "market_index":
         if st.button("⬅ 返回工具箱"):
             go_to("home")
         
