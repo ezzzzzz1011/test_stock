@@ -1025,13 +1025,21 @@ elif st.session_state.page == "watchlist":
 
 
     # ==============================================================
-    # 🌐 頁面：全球大盤與台指戰情室 (精確數值校正版)
+    # 🌐 頁面：全球大盤與台指戰情室 (自動適應主題顏色版)
     # ==============================================================
 elif st.session_state.page == "market_index":
         if st.button("⬅ 返回工具箱"):
             go_to("home")
         
-        st.markdown("<h3 style='margin-top: 10px; margin-bottom: 0px;'>大盤指數</h3>", unsafe_allow_html=True)
+        # 標題與誤差提醒 (加上小字)
+        st.markdown("""
+            <h3 style='margin-top: 10px; margin-bottom: 0px;'>
+                大盤指數 
+                <span style='font-size: 0.75rem; color: #888; font-weight: normal; margin-left: 10px;'>
+                    (有些數值會有些許誤差)
+                </span>
+            </h3>
+            """, unsafe_allow_html=True)
         st.divider()
 
         # --- ⚡ 抓取函式 ---
@@ -1045,16 +1053,12 @@ elif st.session_state.page == "market_index":
                 change = current_p - prev_p
                 pct = (change / prev_p) * 100
                 return current_p, change, pct
-            except:
-                return None, None, None
+            except: return None, None, None
 
-        # --- 🎨 精簡版自定義組件 ---
+        # --- 🎨 自動適應顏色的精簡組件 ---
         def draw_compact_metric(label, ticker_code, fallback=None):
             p, c, pct = get_market_data(ticker_code)
-            
-            # 💡 優先使用 API，但若 API 資料與實際有落差或休市時，使用精確的 fallback
-            if fallback:
-                p, c, pct = fallback
+            if p is None and fallback: p, c, pct = fallback
             
             if p is not None:
                 color = "#ff4b4b" if c >= 0 else "#09ab3b"
@@ -1066,15 +1070,17 @@ elif st.session_state.page == "market_index":
                 else: val_str = f"{p:,.2f}"
                 c_str = f"{c:+.0f}" if ticker_code == "WTX=F" else f"{c:+.2f}"
 
+                # 💡 關鍵修正：將 color 改為 inherit，讓它自動跟隨主題變黑或變白
                 st.markdown(f"""
                     <div style="text-align: center; padding: 2px 0;">
                         <div style="font-size: 0.85rem; color: #888; margin-bottom: 2px;">{label}</div>
-                        <div style="font-size: 1.6rem; font-weight: bold; margin-bottom: 8px; color: #f0f2f6;">{val_str}</div>
+                        <div style="font-size: 1.6rem; font-weight: bold; margin-bottom: 8px; color: inherit;">{val_str}</div>
                         <div style="display: inline-block; background: {color}15; color: {color}; padding: 2px 10px; border-radius: 12px; font-size: 0.8rem; font-weight: 500;">
                             {arrow} 日漲跌 {c_str} ({pct:+.2f}%)
                         </div>
                     </div>
                 """, unsafe_allow_html=True)
+            else: st.write("...")
 
         # --- 九宮格排版 ---
         c1, c2, c3 = st.columns(3)
@@ -1091,14 +1097,12 @@ elif st.session_state.page == "market_index":
         with c5: 
             with st.container(border=True): draw_compact_metric("美10年債", "^TNX", (4.502, -0.01, -1.46))
         with c6: 
-            # 💡 校正：台股加權對齊圖三 (-327.68 / -0.88%)
             with st.container(border=True): draw_compact_metric("台股加權", "^TWII", (36804.34, -327.68, -0.88))
 
         c7, c8, c9 = st.columns(3)
         with c7: 
             with st.container(border=True): draw_compact_metric("台指期 / 近全", "WTX=F", (37742, 664, 1.79))
         with c8: 
-            # 💡 校正：原油期貨對齊圖四 (-10.84 / -11.45%)
             with st.container(border=True): draw_compact_metric("原油期貨", "CL=F", (83.85, -10.84, -11.45))
         with c9: 
             with st.container(border=True): draw_compact_metric("美元/台幣", "TWD=X", (31.46, -0.09, -0.29))
