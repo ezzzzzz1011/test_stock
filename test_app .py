@@ -452,6 +452,8 @@ with st.sidebar:
     st.write(f"👤 當前使用者: **{st.session_state.current_user}**")
     if st.button("⭐ 我的關注清單", use_container_width=True): go_to("watchlist")
     if st.button("🚀 台股查詢", use_container_width=True): go_to("home")
+    if st.button("⚖️ 交易模式", use_container_width=True): go_to("trading")
+    
     st.markdown("""<hr style="margin: 10px 0; border-color: #444;">""", unsafe_allow_html=True)
     
     if st.button("🚪 登出系統", use_container_width=True):
@@ -460,7 +462,6 @@ with st.sidebar:
         
     st.markdown("<br><br>", unsafe_allow_html=True) # 產生一點空白往下推
     st.caption("⚠️ 本系統數據僅供參考，不構成投資建議，投資人請審慎評估風險並自負盈虧。")
-
 if st.session_state.page == "welcome":
     st.markdown("<br><br><br><h3 style='text-align: center; color: #555;'>👈 請從左側選單選擇功能</h3>", unsafe_allow_html=True)
 
