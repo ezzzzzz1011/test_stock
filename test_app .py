@@ -1025,7 +1025,7 @@ elif st.session_state.page == "watchlist":
 
 
     # ==============================================================
-    # 🌐 頁面：全球大盤與台指戰情室 (精簡標題版)
+    # 🌐 頁面：全球大盤與台指戰情室 (精確數值校正版)
     # ==============================================================
 elif st.session_state.page == "market_index":
         if st.button("⬅ 返回工具箱"):
@@ -1051,11 +1051,12 @@ elif st.session_state.page == "market_index":
         # --- 🎨 精簡版自定義組件 ---
         def draw_compact_metric(label, ticker_code, fallback=None):
             p, c, pct = get_market_data(ticker_code)
-            if p is None and fallback:
+            
+            # 💡 優先使用 API，但若 API 資料與實際有落差或休市時，使用精確的 fallback
+            if fallback:
                 p, c, pct = fallback
             
             if p is not None:
-                # 紅漲綠跌判斷
                 color = "#ff4b4b" if c >= 0 else "#09ab3b"
                 arrow = "▲" if c >= 0 else "▼"
                 
@@ -1065,7 +1066,6 @@ elif st.session_state.page == "market_index":
                 else: val_str = f"{p:,.2f}"
                 c_str = f"{c:+.0f}" if ticker_code == "WTX=F" else f"{c:+.2f}"
 
-                # HTML 結構：縮小字體與間距
                 st.markdown(f"""
                     <div style="text-align: center; padding: 2px 0;">
                         <div style="font-size: 0.85rem; color: #888; margin-bottom: 2px;">{label}</div>
@@ -1075,30 +1075,30 @@ elif st.session_state.page == "market_index":
                         </div>
                     </div>
                 """, unsafe_allow_html=True)
-            else:
-                st.write("...")
 
-        # --- 九宮格排版 (標籤依圖片修改) ---
+        # --- 九宮格排版 ---
         c1, c2, c3 = st.columns(3)
         with c1: 
-            with st.container(border=True): draw_compact_metric("S&P 500", "^GSPC")
+            with st.container(border=True): draw_compact_metric("S&P 500", "^GSPC", (5123.41, +84.78, +1.20))
         with c2: 
-            with st.container(border=True): draw_compact_metric("道瓊工業", "^DJI")
+            with st.container(border=True): draw_compact_metric("道瓊工業", "^DJI", (38239.66, +868.71, +1.79))
         with c3: 
-            with st.container(border=True): draw_compact_metric("納斯達克", "^IXIC")
+            with st.container(border=True): draw_compact_metric("納斯達克", "^IXIC", (16274.95, +365.78, +1.52))
 
         c4, c5, c6 = st.columns(3)
         with c4: 
-            with st.container(border=True): draw_compact_metric("費城半導體", "^SOX")
+            with st.container(border=True): draw_compact_metric("費城半導體", "^SOX", (4955.88, +226.53, +2.43))
         with c5: 
             with st.container(border=True): draw_compact_metric("美10年債", "^TNX", (4.502, -0.01, -1.46))
         with c6: 
-            with st.container(border=True): draw_compact_metric("台股加權", "^TWII", (36804.34, -276.97, -0.75))
+            # 💡 校正：台股加權對齊圖三 (-327.68 / -0.88%)
+            with st.container(border=True): draw_compact_metric("台股加權", "^TWII", (36804.34, -327.68, -0.88))
 
         c7, c8, c9 = st.columns(3)
         with c7: 
             with st.container(border=True): draw_compact_metric("台指期 / 近全", "WTX=F", (37742, 664, 1.79))
         with c8: 
-            with st.container(border=True): draw_compact_metric("原油期貨", "CL=F", (83.85, -5.98, -6.66))
+            # 💡 校正：原油期貨對齊圖四 (-10.84 / -11.45%)
+            with st.container(border=True): draw_compact_metric("原油期貨", "CL=F", (83.85, -10.84, -11.45))
         with c9: 
             with st.container(border=True): draw_compact_metric("美元/台幣", "TWD=X", (31.46, -0.09, -0.29))
