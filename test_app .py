@@ -452,7 +452,6 @@ with st.sidebar:
     st.write(f"👤 當前使用者: **{st.session_state.current_user}**")
     if st.button("⭐ 我的關注清單", use_container_width=True): go_to("watchlist")
     if st.button("🚀 台股查詢", use_container_width=True): go_to("home")
-    if st.button("⚖️ 交易模式", use_container_width=True): go_to("trading")
     
     st.markdown("""<hr style="margin: 10px 0; border-color: #444;">""", unsafe_allow_html=True)
     
