@@ -1025,7 +1025,7 @@ elif st.session_state.page == "watchlist":
 
 
     # ==============================================================
-    # 🌐 頁面：全球大盤與台指戰情室 (紅漲綠跌精準版)
+    # 🌐 頁面：全球大盤與台指戰情室 (精簡版 & 正確配色)
     # ==============================================================
 elif st.session_state.page == "market_index":
         if st.button("⬅ 返回工具箱"):
@@ -1048,62 +1048,57 @@ elif st.session_state.page == "market_index":
             except:
                 return None, None, None
 
-        # --- 🎨 自定義顯示組件 (解決文字干擾顏色問題) ---
-        def draw_metric_card(label, ticker_code, fallback=None):
+        # --- 🎨 精簡版自定義組件 ---
+        def draw_compact_metric(label, ticker_code, fallback=None):
             p, c, pct = get_market_data(ticker_code)
             if p is None and fallback:
                 p, c, pct = fallback
             
             if p is not None:
-                # 💡 核心邏輯：判斷紅漲綠跌 (台股習慣)
+                # 紅漲綠跌判斷
                 color = "#ff4b4b" if c >= 0 else "#09ab3b"
                 arrow = "▲" if c >= 0 else "▼"
                 
-                # 格式化數值
+                # 數值格式化
                 if ticker_code == "^TNX": val_str = f"{p:.3f}%"
                 elif ticker_code == "WTX=F": val_str = f"{p:,.0f}"
                 else: val_str = f"{p:,.2f}"
-
-                # 格式化漲跌值
                 c_str = f"{c:+.0f}" if ticker_code == "WTX=F" else f"{c:+.2f}"
 
-                # 使用 HTML 畫出跟原生一樣、但顏色精確的卡片
+                # HTML 結構：縮小字體與間距
                 st.markdown(f"""
-                    <div style="text-align: center; padding: 10px 0;">
-                        <div style="font-size: 0.9rem; color: #888; margin-bottom: 5px;">{label}</div>
-                        <div style="font-size: 2.2rem; font-weight: bold; margin-bottom: 12px;">{val_str}</div>
-                        <div style="display: inline-block; background: {color}22; color: {color}; padding: 4px 12px; border-radius: 20px; font-size: 0.9rem; font-weight: 500;">
+                    <div style="text-align: center; padding: 2px 0;">
+                        <div style="font-size: 0.85rem; color: #888; margin-bottom: 2px;">{label}</div>
+                        <div style="font-size: 1.6rem; font-weight: bold; margin-bottom: 8px; color: #f0f2f6;">{val_str}</div>
+                        <div style="display: inline-block; background: {color}15; color: {color}; padding: 2px 10px; border-radius: 12px; font-size: 0.8rem; font-weight: 500;">
                             {arrow} 日漲跌 {c_str} ({pct:+.2f}%)
                         </div>
                     </div>
                 """, unsafe_allow_html=True)
             else:
-                st.write("數據載入中...")
+                st.write("...")
 
-        # --- 九宮格排版 ---
-        # 第一排
+        # --- 九宮格排版 (標籤依圖片修改) ---
         c1, c2, c3 = st.columns(3)
         with c1: 
-            with st.container(border=True): draw_metric_card("S&P 500", "^GSPC")
+            with st.container(border=True): draw_compact_metric("S&P 500", "^GSPC")
         with c2: 
-            with st.container(border=True): draw_metric_card("道瓊工業", "^DJI")
+            with st.container(border=True): draw_compact_metric("道瓊工業", "^DJI")
         with c3: 
-            with st.container(border=True): draw_metric_card("納斯達克", "^IXIC")
+            with st.container(border=True): draw_compact_metric("納斯達克", "^IXIC")
 
-        # 第二排
         c4, c5, c6 = st.columns(3)
         with c4: 
-            with st.container(border=True): draw_metric_card("費城半導體", "^SOX")
+            with st.container(border=True): draw_compact_metric("費城半導體", "^SOX")
         with c5: 
-            with st.container(border=True): draw_metric_card("美10年債", "^TNX", (0.425, -0.01, -1.46))
+            with st.container(border=True): draw_compact_metric("美10年債", "^TNX", (4.502, -0.01, -1.46))
         with c6: 
-            with st.container(border=True): draw_metric_card("台股加權", "^TWII", (36804.34, -276.97, -0.75))
+            with st.container(border=True): draw_compact_metric("台股加權", "^TWII", (36804.34, -276.97, -0.75))
 
-        # 第三排
         c7, c8, c9 = st.columns(3)
         with c7: 
-            with st.container(border=True): draw_metric_card("台指期 / 近全", "WTX=F", (37742, 664, 1.79))
+            with st.container(border=True): draw_compact_metric("台指期 / 近全", "WTX=F", (37742, 664, 1.79))
         with c8: 
-            with st.container(border=True): draw_metric_card("原油期貨", "CL=F", (83.85, -5.98, -6.66))
+            with st.container(border=True): draw_compact_metric("原油期貨", "CL=F", (83.85, -5.98, -6.66))
         with c9: 
-            with st.container(border=True): draw_metric_card("美元/台幣", "TWD=X", (31.46, -0.09, -0.29))
+            with st.container(border=True): draw_compact_metric("美元/台幣", "TWD=X", (31.46, -0.09, -0.29))
