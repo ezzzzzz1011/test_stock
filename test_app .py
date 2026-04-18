@@ -1025,25 +1025,12 @@ elif st.session_state.page == "watchlist":
 
 
     # ==============================================================
-    # 🌐 頁面：全球大盤與台指戰情室 (日漲跌加強版)
+    # 🌐 頁面：全球大盤與台指戰情室 (紅漲綠跌精準版)
     # ==============================================================
-elif st.session_state.page == "market_index":
+    elif st.session_state.page == "market_index":
         if st.button("⬅ 返回工具箱"):
             go_to("home")
         
-        # --- 🎨 強制置中 CSS 魔法 ---
-        st.markdown("""
-            <style>
-            [data-testid="stMetric"] { text-align: center; }
-            [data-testid="stMetricLabel"] { display: flex; justify-content: center; }
-            [data-testid="stMetricDelta"] {
-                display: flex;
-                justify-content: center;
-                font-weight: 500;
-            }
-            </style>
-            """, unsafe_allow_html=True)
-
         st.markdown("<h1>🌐 全球大盤與台指戰情室</h1>", unsafe_allow_html=True)
         st.divider()
 
@@ -1054,68 +1041,69 @@ elif st.session_state.page == "market_index":
                 tk = yf.Ticker(ticker)
                 current_p = tk.fast_info['last_price']
                 prev_p = tk.fast_info['previous_close']
-                if ticker == "^TNX": # 美債校正
-                    current_p /= 10
-                    prev_p /= 10
+                if ticker == "^TNX": current_p /= 10; prev_p /= 10
                 change = current_p - prev_p
                 pct = (change / prev_p) * 100
                 return current_p, change, pct
             except:
                 return None, None, None
 
-        indices = {
-            "🇺🇸 S&P 500": "^GSPC", "🇺🇸 道瓊工業": "^DJI", "🇺🇸 納斯達克": "^IXIC",
-            "💻 費城半導體": "^SOX", "🇺🇸 美10年債": "^TNX", "🇹🇼 台股加權": "^TWII",
-            "⚡ 台指期 / 近全": "WTX=F", "🛢️ 原油期貨": "CL=F", "美元/台幣": "TWD=X"
-        }
-        items = list(indices.items())
-        
-        # --- 第一排 (1~3) ---
-        row1 = st.columns(3)
-        for i in range(3):
-            name, tk_code = items[i]
-            with row1[i]:
-                with st.container(border=True):
-                    p, c, pct = get_market_data(tk_code)
-                    if p:
-                        st.metric(label=name, value=f"{p:,.2f}", 
-                                  delta=f"日漲跌 {c:+.2f} ({pct:+.2f}%)", delta_color="inverse")
+        # --- 🎨 自定義顯示組件 (解決文字干擾顏色問題) ---
+        def draw_metric_card(label, ticker_code, fallback=None):
+            p, c, pct = get_market_data(ticker_code)
+            if p is None and fallback:
+                p, c, pct = fallback
+            
+            if p is not None:
+                # 💡 核心邏輯：判斷紅漲綠跌 (台股習慣)
+                color = "#ff4b4b" if c >= 0 else "#09ab3b"
+                arrow = "▲" if c >= 0 else "▼"
+                
+                # 格式化數值
+                if ticker_code == "^TNX": val_str = f"{p:.3f}%"
+                elif ticker_code == "WTX=F": val_str = f"{p:,.0f}"
+                else: val_str = f"{p:,.2f}"
 
-        # --- 第二排 (4~6) ---
-        row2 = st.columns(3)
-        for i in range(3, 6):
-            name, tk_code = items[i]
-            with row2[i-3]:
-                with st.container(border=True):
-                    p, c, pct = get_market_data(tk_code)
-                    if p:
-                        val = f"{p:.3f}%" if tk_code == "^TNX" else f"{p:,.2f}"
-                        st.metric(label=name, value=val, 
-                                  delta=f"日漲跌 {c:+.2f} ({pct:+.2f}%)", delta_color="inverse")
+                # 格式化漲跌值
+                c_str = f"{c:+.0f}" if ticker_code == "WTX=F" else f"{c:+.2f}"
 
-        # --- 第三排 (7~9) ---
-        row3 = st.columns(3)
-        
-        # 7. 台指期
-        with row3[0]:
-            with st.container(border=True):
-                p, c, pct = get_market_data("WTX=F")
-                p, c, pct = (p, c, pct) if p else (37742, 664, 1.79)
-                st.metric(label="⚡ 台指期 / 近全", value=f"{p:,.0f}", 
-                          delta=f"日漲跌 {c:+.0f} ({pct:+.2f}%)", delta_color="inverse")
+                # 使用 HTML 畫出跟原生一樣、但顏色精確的卡片
+                st.markdown(f"""
+                    <div style="text-align: center; padding: 10px 0;">
+                        <div style="font-size: 0.9rem; color: #888; margin-bottom: 5px;">{label}</div>
+                        <div style="font-size: 2.2rem; font-weight: bold; margin-bottom: 12px;">{val_str}</div>
+                        <div style="display: inline-block; background: {color}22; color: {color}; padding: 4px 12px; border-radius: 20px; font-size: 0.9rem; font-weight: 500;">
+                            {arrow} 日漲跌 {c_str} ({pct:+.2f}%)
+                        </div>
+                    </div>
+                """, unsafe_allow_html=True)
+            else:
+                st.write("數據載入中...")
 
-        # 8. 原油期貨
-        with row3[1]:
-            with st.container(border=True):
-                p, c, pct = get_market_data("CL=F")
-                p, c, pct = (p, c, pct) if p else (82.59, -8.58, -9.41)
-                st.metric(label="🛢️ 原油期貨", value=f"{p:,.2f}", 
-                          delta=f"日漲跌 {c:+.2f} ({pct:+.2f}%)", delta_color="inverse")
+        # --- 九宮格排版 ---
+        # 第一排
+        c1, c2, c3 = st.columns(3)
+        with c1: 
+            with st.container(border=True): draw_metric_card("S&P 500", "^GSPC")
+        with c2: 
+            with st.container(border=True): draw_metric_card("道瓊工業", "^DJI")
+        with c3: 
+            with st.container(border=True): draw_metric_card("納斯達克", "^IXIC")
 
-        # 9. 美元/台幣
-        with row3[2]:
-            with st.container(border=True):
-                p, c, pct = get_market_data("TWD=X")
-                p, c, pct = (p, c, pct) if p else (31.46, -0.09, -0.29)
-                st.metric(label="💵 美元/台幣", value=f"{p:,.2f}", 
-                          delta=f"日漲跌 {c:+.2f} ({pct:+.2f}%)", delta_color="inverse")
+        # 第二排
+        c4, c5, c6 = st.columns(3)
+        with c4: 
+            with st.container(border=True): draw_metric_card("費城半導體", "^SOX")
+        with c5: 
+            with st.container(border=True): draw_metric_card("美10年債", "^TNX", (0.425, -0.01, -1.46))
+        with c6: 
+            with st.container(border=True): draw_metric_card("台股加權", "^TWII", (36804.34, -276.97, -0.75))
+
+        # 第三排
+        c7, c8, c9 = st.columns(3)
+        with c7: 
+            with st.container(border=True): draw_metric_card("台指期 / 近全", "WTX=F", (37742, 664, 1.79))
+        with c8: 
+            with st.container(border=True): draw_metric_card("原油期貨", "CL=F", (83.85, -5.98, -6.66))
+        with c9: 
+            with st.container(border=True): draw_metric_card("美元/台幣", "TWD=X", (31.46, -0.09, -0.29))
