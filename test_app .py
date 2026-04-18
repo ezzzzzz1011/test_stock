@@ -1027,7 +1027,7 @@ elif st.session_state.page == "watchlist":
     # ==============================================================
     # 🌐 頁面：全球大盤與台指戰情室 (精緻置中版)
     # ==============================================================
- elif st.session_state.page == "market_index":
+elif st.session_state.page == "market_index":
         if st.button("⬅ 返回工具箱"):
             go_to("home")
         
