@@ -1031,7 +1031,7 @@ elif st.session_state.page == "market_index":
         if st.button("⬅ 返回工具箱"):
             go_to("home")
         
-        st.markdown("<h3 style='margin-top: 10px; margin-bottom: 0px;'>全球大盤</h3>", unsafe_allow_html=True)
+        st.markdown("<h3 style='margin-top: 10px; margin-bottom: 0px;'>大盤指數</h3>", unsafe_allow_html=True)
         st.divider()
 
         # --- ⚡ 抓取函式 ---
