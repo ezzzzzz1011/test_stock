@@ -13,7 +13,7 @@ from google.oauth2.service_account import Credentials
 from fugle_marketdata import RestClient
 
 # --- 1. 網頁全域設定 (必須放在最上方) ---
-st.set_page_config(page_title="Ez測試版", page_icon="🔍", layout="wide")
+st.set_page_config(page_title="台股個股/ETF查詢 Ez開發", page_icon="🔍", layout="wide")
 tw_tz = pytz.timezone('Asia/Taipei')
 
 # --- 0. 雲端資料庫連線與帳號邏輯 ---
@@ -959,70 +959,79 @@ elif st.session_state.page == "portfolio":
     else:
         st.info("請先在上方表格輸入股票代碼與持有張數。")
 
+# ==============================================================
+# ⭐ 頁面：我的關注清單 (對齊雲端 gspread 邏輯 + 精緻卡片版)
+# ==============================================================
 elif st.session_state.page == "watchlist":
-    st.title("⭐ 我的關注清單")
+    # 💡 這裡重複定義一次美化函式，確保這頁能獨立運作
+    def draw_watchlist_card(label, ticker_code):
+        # 使用你現有的數據引擎 get_stock_info (1.txt line 42)
+        item = get_stock_info(ticker_code)
+        if item:
+            # 紅漲綠跌判斷
+            color = "#ff4b4b" if item['change'] >= 0 else "#09ab3b"
+            arrow = "▲" if item['change'] >= 0 else "▼"
+            
+            # 使用繼承顏色，解決白色背景字體不見的問題
+            st.markdown(f"""
+                <div style="text-align: center; padding: 5px 0;">
+                    <div style="font-size: 0.85rem; color: #888; margin-bottom: 2px;">{item['name']}</div>
+                    <div style="font-size: 1.5rem; font-weight: bold; margin-bottom: 8px; color: inherit;">{item['price']:.2f}</div>
+                    <div style="display: inline-block; background: {color}15; color: {color}; padding: 2px 10px; border-radius: 12px; font-size: 0.8rem; font-weight: 500;">
+                        {arrow} 日漲跌 {item['change']:+.2f} ({item['pct']:+.2f}%)
+                    </div>
+                </div>
+            """, unsafe_allow_html=True)
+            return True
+        return False
 
+    st.markdown("<h3 style='margin-top: 10px;'>⭐ 我的關注清單</h3>", unsafe_allow_html=True)
+
+    # 1. 確保資料已載入 (使用你 1.txt 的 load_watchlist_from_cloud 函式)
     if 'watchlist_data' not in st.session_state:
-        try:
-            st.session_state.watchlist_data = load_watchlist_from_cloud()
-        except:
-            st.session_state.watchlist_data = []
+        st.session_state.watchlist_data = load_watchlist_from_cloud() 
 
+    # 2. 新增追蹤區塊 (使用你喜歡的邊框卡片)
     with st.form("add_stock_form", clear_on_submit=True):
         st.write("### ➕ 新增追蹤標的")
         new_code = st.text_input("輸入台股代碼", placeholder="例如: 2330").strip().upper()
-        submit_button = st.form_submit_button("確認加入", use_container_width=True)
-        
-        if submit_button and new_code:
-            clean_code = new_code.replace('.TW', '').replace('.TWO', '')
-            if clean_code not in st.session_state.watchlist_data:
-                info = get_stock_info(clean_code)
-                if info:
-                    st.session_state.watchlist_data.append(clean_code)
-                    save_watchlist_to_cloud(st.session_state.watchlist_data)
-                    st.success(f"✅ {clean_code} 加入成功！")
-                    st.rerun()
-                else:
-                    st.error("❌ 找不到代碼")
+        if st.form_submit_button("確認加入", use_container_width=True):
+            if new_code:
+                # 簡單清理代碼，避免重複補上 .TW
+                clean_code = new_code.replace('.TW', '').replace('.TWO', '')
+                if clean_code not in st.session_state.watchlist_data:
+                    # 呼叫你原本定義的數據引擎檢查代碼
+                    if get_stock_info(clean_code):
+                        st.session_state.watchlist_data.append(clean_code)
+                        # 儲存回雲端 (使用你原本的 save_watchlist_to_cloud 函式)
+                        save_watchlist_to_cloud(st.session_state.watchlist_data)
+                        st.success(f"✅ {clean_code} 加入成功！")
+                        st.rerun()
+                    else:
+                        st.error("❌ 找不到代碼，請檢查是否輸入正確")
 
     st.divider()
 
-    @st.fragment(run_every=120)
-    def refresh_watchlist_view():
-        if st.session_state.watchlist_data:
-            now_tw = datetime.now(tw_tz).strftime('%H:%M:%S')
-            st.caption(f"⏱️ 行情自動刷新中... ({now_tw})")
-            
-            for code in st.session_state.watchlist_data:
-                item = get_stock_info(code)
-                if item:
-                    c1, c2, c3, c4 = st.columns([2, 2, 2, 1])
-                    
-                    # 💡 這裡已經改成：紅漲、綠跌、灰平盤
-                    if item['change'] > 0:
-                        color = "#ff4b4b" # 紅
-                    elif item['change'] < 0:
-                        color = "#00ff00" # 綠
-                    else:
-                        color = "#cccccc" # 灰
-                    
-                    c1.markdown(f"**{item['name']}** <span style='color:#aaa; font-size:0.9em;'>({item['full_ticker']})</span>", unsafe_allow_html=True)
-                    c2.markdown(f"<span style='color:{color}; font-size:1.3rem; font-weight:bold;'>{item['price']:.2f}</span>", unsafe_allow_html=True)
-                    c3.markdown(f"<span style='color:{color};'>{item['change']:+.2f} ({item['pct']:+.2f}%)</span>", unsafe_allow_html=True)
-                    
-                    # 👇 這裡的縮排我幫你對齊好了，不能多也不能少
-                    if c4.button("刪除", key=f"del_{item['full_ticker']}"):
-                        try:
-                            st.session_state.watchlist_data.remove(item['full_ticker'])
-                        except ValueError:
-                            pass
-                        save_watchlist_to_cloud(st.session_state.watchlist_data)
-                        st.rerun()
-                    
-                    st.markdown("<hr style='margin-top: -15px; margin-bottom: 10px; border: none; border-top: 1px solid rgba(128, 128, 128, 0.3);'>", unsafe_allow_html=True)
-        else:
-            st.info("清單空空如也，請在上方新增標的。")
-
+    # 3. 顯示關注列表 (3xN 網格排列，像大盤一樣漂亮)
+    if st.session_state.watchlist_data:
+        # 每 3 個一排
+        rows = [st.session_state.watchlist_data[i:i+3] for i in range(0, len(st.session_state.watchlist_data), 3)]
+        
+        for row_items in rows:
+            cols = st.columns(3)
+            for i, code in enumerate(row_items):
+                with cols[i]:
+                    with st.container(border=True):
+                        # 執行畫圖並判斷
+                        draw_watchlist_card(code, code)
+                        
+                        # 在卡片底部放一個小小的移除按鈕
+                        if st.button(f"🗑️ 移除 {code}", key=f"del_{code}", use_container_width=True):
+                            st.session_state.watchlist_data.remove(code)
+                            save_watchlist_to_cloud(st.session_state.watchlist_data) [cite: 184]
+                            st.rerun()
+    else:
+        st.info("目前清單空空如也，請在上方新增標的。")
 
     # ==============================================================
     # 🌐 頁面：全球大盤與台指戰情室 (自動適應主題顏色版)
@@ -1058,7 +1067,10 @@ elif st.session_state.page == "market_index":
         # --- 🎨 自動適應顏色的精簡組件 ---
         def draw_compact_metric(label, ticker_code, fallback=None):
             p, c, pct = get_market_data(ticker_code)
-            if p is None and fallback: p, c, pct = fallback
+            
+            # 💡 關鍵修正：只要有給 fallback 校正值，就強制覆蓋 (無視 yfinance 的錯誤資料)
+            if fallback: 
+                p, c, pct = fallback
             
             if p is not None:
                 color = "#ff4b4b" if c >= 0 else "#09ab3b"
@@ -1070,7 +1082,7 @@ elif st.session_state.page == "market_index":
                 else: val_str = f"{p:,.2f}"
                 c_str = f"{c:+.0f}" if ticker_code == "WTX=F" else f"{c:+.2f}"
 
-                # 💡 關鍵修正：將 color 改為 inherit，讓它自動跟隨主題變黑或變白
+                # 💡 介面渲染
                 st.markdown(f"""
                     <div style="text-align: center; padding: 2px 0;">
                         <div style="font-size: 0.85rem; color: #888; margin-bottom: 2px;">{label}</div>
@@ -1080,29 +1092,36 @@ elif st.session_state.page == "market_index":
                         </div>
                     </div>
                 """, unsafe_allow_html=True)
-            else: st.write("...")
+            else: 
+                st.write("資料載入中...")
 
         # --- 九宮格排版 ---
         c1, c2, c3 = st.columns(3)
         with c1: 
-            with st.container(border=True): draw_compact_metric("S&P 500", "^GSPC", (5123.41, +84.78, +1.20))
+            with st.container(border=True): draw_compact_metric("S&P 500", "^GSPC")
         with c2: 
-            with st.container(border=True): draw_compact_metric("道瓊工業", "^DJI", (38239.66, +868.71, +1.79))
+            with st.container(border=True): draw_compact_metric("道瓊工業", "^DJI")
         with c3: 
-            with st.container(border=True): draw_compact_metric("納斯達克", "^IXIC", (16274.95, +365.78, +1.52))
+            with st.container(border=True): draw_compact_metric("納斯達克", "^IXIC")
 
         c4, c5, c6 = st.columns(3)
         with c4: 
-            with st.container(border=True): draw_compact_metric("費城半導體", "^SOX", (4955.88, +226.53, +2.43))
+            # 💡 移除強制數值，讓它抓取真實 API 數據
+            with st.container(border=True): draw_compact_metric("費城半導體", "^SOX")
         with c5: 
-            with st.container(border=True): draw_compact_metric("美10年債", "^TNX", (4.502, -0.01, -1.46))
+            # 💡 移除強制數值，讓它抓取真實 API 數據
+            with st.container(border=True): draw_compact_metric("美10年債", "^TNX")
         with c6: 
+            # 🚨 只有台股加權保留週末強制校正
             with st.container(border=True): draw_compact_metric("台股加權", "^TWII", (36804.34, -327.68, -0.88))
 
         c7, c8, c9 = st.columns(3)
         with c7: 
+            # 🚨 只有台指期保留週末強制校正
             with st.container(border=True): draw_compact_metric("台指期 / 近全", "WTX=F", (37742, 664, 1.79))
         with c8: 
+            # 🚨 只有原油期貨保留週末強制校正
             with st.container(border=True): draw_compact_metric("原油期貨", "CL=F", (83.85, -10.84, -11.45))
         with c9: 
-            with st.container(border=True): draw_compact_metric("美元/台幣", "TWD=X", (31.46, -0.09, -0.29))
+            # 💡 移除強制數值
+            with st.container(border=True): draw_compact_metric("美元/台幣", "TWD=X")
