@@ -1161,21 +1161,35 @@ elif st.session_state.page == "tax_calc":
             dependents_70plus = st.number_input("滿70歲以上扶養人數", min_value=0, value=0, step=1)
             
         st.divider()
-        st.markdown("#### 🌟 第三部分：特別扣除額 (若無請填0)")
+        st.markdown("#### 🌟 第三部分：特別扣除額")
+        st.caption("以下按「人數」計算的項目，請直接輸入符合資格的【人數】，系統會自動乘上對應額度。")
         c4, c5, c6 = st.columns(3)
         with c4:
-            saving_deduction = st.number_input("儲蓄投資 (上限27萬)", value=0, step=1000)
-            disability_deduction = st.number_input("身心障礙 (每人21.8萬)", value=0, step=1000)
+            saving_deduction = st.number_input("儲蓄投資金額 (上限27萬)", value=0, step=1000)
+            disability_count = st.number_input("身心障礙【人數】 (每人21.8萬)", min_value=0, value=0, step=1)
         with c5:
-            edu_deduction = st.number_input("教育學費 (每人2.5萬)", value=0, step=1000)
-            preschool_deduction = st.number_input("幼兒學前 (第1名12萬/第2名起13.5萬)", value=0, step=1000)
+            edu_count = st.number_input("教育學費【人數】 (每人2.5萬)", min_value=0, value=0, step=1)
+            preschool_count = st.number_input("幼兒學前【人數】 (第1名12萬/第2名起13.5萬)", min_value=0, value=0, step=1)
         with c6:
-            ltc_deduction = st.number_input("長期照顧 (每人18萬)", value=0, step=1000)
-            rent_deduction = st.number_input("房屋租金支出 (上限18萬)", value=0, step=1000)
+            ltc_count = st.number_input("長期照顧【人數】 (每人18萬)", min_value=0, value=0, step=1)
+            rent_deduction = st.number_input("房屋租金支出金額 (上限18萬)", value=0, step=1000)
 
     # --- 2. 後台精準計算邏輯 ---
+    # 【自動計算】將人數轉換為扣除額總金額
+    disability_deduction = disability_count * 218000
+    edu_deduction = edu_count * 25000
+    ltc_deduction = ltc_count * 180000
+    
+    # 幼兒學前比較特別：第1名12萬，第2名起每人13.5萬
+    if preschool_count == 0:
+        preschool_deduction = 0
+    elif preschool_count == 1:
+        preschool_deduction = 120000
+    else:
+        preschool_deduction = 120000 + (preschool_count - 1) * 135000
+
     # 【自動防呆】薪資特別扣除額：只能扣除「實際薪資」與「21.8萬」兩者取其低
-    salary_deduction = min(salary, 218000 * (1 if "單身" in marital_status else 2)) # 簡單假設雙薪皆達上限，實務可更細，此處以防呆為主
+    salary_deduction = min(salary, 218000 * (1 if "單身" in marital_status else 2)) 
     
     # 總人數與免稅額
     total_people = dependents_normal + dependents_70plus
@@ -1312,8 +1326,7 @@ elif st.session_state.page == "tax_calc":
         with st.container(border=True):
             st.markdown(f"**綜合所得總額：** <span style='float:right;'>{total_income:,.0f} 元</span>", unsafe_allow_html=True)
             
-            # 特別標示出自動計算的薪資扣除額
-            st.markdown(f"<span style='color:#888; font-size: 13px;'>└ 包含自動核算之薪資特別扣除額: {salary_deduction:,.0f} 元</span>", unsafe_allow_html=True)
+            st.markdown(f"<div style='color:#888; font-size: 13px; margin-top: -10px; margin-bottom: 5px;'>└ 包含自動核算之薪資特別扣除額: {salary_deduction:,.0f} 元</div>", unsafe_allow_html=True)
             
             st.markdown(f"**扣除額及免稅額合計：** <span style='float:right; color:#ffbc4b;'>- {total_deductions_all:,.0f} 元</span>", unsafe_allow_html=True)
             st.markdown(f"**基本生活費差額：** <span style='float:right; color:#ffbc4b;'>- {basic_diff:,.0f} 元</span>", unsafe_allow_html=True)
