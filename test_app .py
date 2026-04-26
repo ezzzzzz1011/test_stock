@@ -1133,7 +1133,7 @@ elif st.session_state.page == "market_index":
             with st.container(border=True): draw_compact_metric("美元/台幣", "TWD=X")
 
 # ==============================================================
-# 📝 頁面：股利報稅試算 (含稅率級距表與最終繳稅計算)
+# 📝 頁面：股利報稅與基本生活費試算 (114年度完整視覺化版)
 # ==============================================================
 elif st.session_state.page == "tax_calc":
     if st.button("⬅️ 返回工具箱"): go_to("home")
@@ -1180,12 +1180,12 @@ elif st.session_state.page == "tax_calc":
     # 計算股利抵減稅額 (上限8萬)
     div_credit = min(80000, div_total * 0.085)
 
-    # 計算綜合所得淨額 (所得 - 免稅額 - 標/列扣 - 特別扣除額 - 基本生活費差額)
+    # 計算綜合所得淨額
     total_income = salary + div_total
     total_deductions_all = sum_deductions_for_basic + salary_deduction
     taxable_income = max(0, total_income - total_deductions_all - basic_diff)
 
-    # 套用 114 年度綜合所得稅速算公式 (對應你上傳的圖片)
+    # 套用 114 年度綜合所得稅速算公式
     if taxable_income <= 590000: 
         tax_rate, prog_diff = 0.05, 0
     elif taxable_income <= 1330000: 
@@ -1200,7 +1200,85 @@ elif st.session_state.page == "tax_calc":
     base_tax = (taxable_income * tax_rate) - prog_diff
     final_tax_to_pay = base_tax - div_credit
 
-    # --- 3. 畫面呈現 ---
+    # --- 3. 繪製國稅局風格表格 (基本生活差額 & 股利抵減) ---
+    st.markdown("### 📝 扣除額與抵減稅額明細")
+    table_css = """
+    <style>
+    .tax-table { width: 100%; border-collapse: collapse; margin-bottom: 20px; font-size: 15px; text-align: center; font-family: '微軟正黑體', sans-serif; background-color: white; color: black; }
+    .tax-table th, .tax-table td { border: 1px solid #333; padding: 10px; }
+    .tax-table th { background-color: #f2f2f2; font-weight: bold; }
+    .tax-table td { font-family: 'Consolas', monospace; font-size: 16px; }
+    .operator { width: 30px; background-color: #f9f9f9; font-weight: bold; }
+    </style>
+    """
+    st.markdown(table_css, unsafe_allow_html=True)
+
+    st.markdown("★ **基本生活差額：**")
+    table1_html = f"""
+    <table class="tax-table">
+        <tr>
+            <th>每人基本生活費</th><th class="operator">乘</th>
+            <th>納稅者、配偶及受<br>扶養親屬人數</th><th class="operator">減</th>
+            <th>全部免稅額</th><th class="operator">減</th>
+            <th>一般扣除額</th><th class="operator">減</th>
+            <th>儲蓄投資<br>特別扣除額</th><th class="operator">減</th>
+        </tr>
+        <tr>
+            <td>{basic_expense:,}</td><td class="operator">✕</td>
+            <td>{dependents}</td><td class="operator">－</td>
+            <td>{total_exemption:,}</td><td class="operator">－</td>
+            <td>{general_deduction:,}</td><td class="operator">－</td>
+            <td>{saving_deduction:,}</td><td class="operator">－</td>
+        </tr>
+        <tr>
+            <th>身心障礙<br>特別扣除額</th><th class="operator">減</th>
+            <th>教育學費<br>特別扣除額</th><th class="operator">減</th>
+            <th>幼兒學前<br>特別扣除額</th><th class="operator">減</th>
+            <th>長期照顧<br>特別扣除額</th><th class="operator">減</th>
+            <th>房屋租金支出<br>特別扣除額</th><th class="operator">等於</th>
+        </tr>
+        <tr>
+            <td>{disability_deduction:,}</td><td class="operator">－</td>
+            <td>{edu_deduction:,}</td><td class="operator">－</td>
+            <td>{preschool_deduction:,}</td><td class="operator">－</td>
+            <td>{ltc_deduction:,}</td><td class="operator">－</td>
+            <td>{rent_deduction:,}</td><td class="operator">＝</td>
+        </tr>
+        <tr>
+            <th colspan="10" style="text-align: left; padding-left: 20px;">基本生活費差額</th>
+        </tr>
+        <tr>
+            <td colspan="10" style="text-align: left; padding-left: 20px; font-weight: bold; font-size: 18px; color: #d9534f;">{basic_diff:,}</td>
+        </tr>
+    </table>
+    """
+    st.markdown(table1_html, unsafe_allow_html=True)
+
+    st.markdown("★ **股利及盈餘可抵減稅額：**")
+    table2_html = f"""
+    <table class="tax-table">
+        <tr>
+            <th style="width: 40%;">股利及盈餘合計金額</th>
+            <th class="operator">乘</th>
+            <th style="width: 20%;">抵減率</th>
+            <th class="operator">等於</th>
+            <th style="width: 40%;">股利及盈餘可抵減稅額</th>
+        </tr>
+        <tr>
+            <td>{div_total:,}</td>
+            <td class="operator">✕</td>
+            <td>8.5%</td>
+            <td class="operator">＝</td>
+            <td style="font-weight: bold; font-size: 18px; color: #28a745;">
+                {div_credit:,.0f}<br>
+                <span style="font-size: 12px; color: #666; font-weight: normal;">(上限8萬元)</span>
+            </td>
+        </tr>
+    </table>
+    """
+    st.markdown(table2_html, unsafe_allow_html=True)
+
+    # --- 4. 最終稅額計算與級距表呈現 ---
     st.divider()
     col_chart, col_result = st.columns([1.2, 1])
     
@@ -1208,7 +1286,7 @@ elif st.session_state.page == "tax_calc":
         st.markdown("### 📊 114年度綜合所得稅速算級距表")
         st.caption("根據您輸入的資料，系統會自動對應下表計算：")
         
-        # 改用 Pandas DataFrame 搭配 st.table，完美適應深色/淺色主題
+        # 使用 Pandas DataFrame 搭配 st.table，完美適應深色/淺色主題
         import pandas as pd
         tax_table_data = pd.DataFrame({
             "所得淨額": ["0 ~ 590,000", "590,001 ~ 1,330,000", "1,330,001 ~ 2,660,000", "2,660,001 ~ 4,980,000", "4,980,001 以上"],
@@ -1220,7 +1298,7 @@ elif st.session_state.page == "tax_calc":
     with col_result:
         st.markdown("### 🧾 一年要繳多少稅？")
         
-        # 改用 Streamlit 原生容器與 Markdown，避免 HTML 縮排變成程式碼區塊
+        # 使用 Streamlit 原生容器與 Markdown，避免 HTML 縮排變成程式碼區塊
         with st.container(border=True):
             st.markdown(f"**綜合所得總額：** <span style='float:right;'>{total_income:,.0f} 元</span>", unsafe_allow_html=True)
             st.markdown(f"**扣除額及免稅額合計：** <span style='float:right; color:#ffbc4b;'>- {total_deductions_all:,.0f} 元</span>", unsafe_allow_html=True)
@@ -1236,49 +1314,6 @@ elif st.session_state.page == "tax_calc":
             st.markdown("---")
             final_color = "#ff4b4b" if final_tax_to_pay > 0 else "#09ab3b"
             
-            # 使用置中的排版顯示最終金額
             st.markdown("<div style='text-align: center; color: #aaa; font-size: 16px;'>最終實繳 / 退稅金額</div>", unsafe_allow_html=True)
             st.markdown(f"<div style='text-align: center; font-size: 38px; font-weight: bold; color: {final_color};'>{final_tax_to_pay:,.0f} <span style='font-size: 16px;'>元</span></div>", unsafe_allow_html=True)
             st.markdown("<div style='text-align: center; color: #888; font-size: 13px;'>(若為負數，表示國稅局將退稅給您)</div>", unsafe_allow_html=True)
-        
-        
-        # 顯示計算過程與結果
-        calc_html = f"""
-        <div style="background-color: #1e1e28; padding: 20px; border-radius: 10px; border: 1px solid #444; color: white;">
-            <div style="display: flex; justify-content: space-between; border-bottom: 1px solid #444; padding-bottom: 8px; margin-bottom: 8px;">
-                <span style="color: #ccc;">綜合所得總額：</span>
-                <span style="font-weight: bold;">{total_income:,.0f} 元</span>
-            </div>
-            <div style="display: flex; justify-content: space-between; border-bottom: 1px solid #444; padding-bottom: 8px; margin-bottom: 8px;">
-                <span style="color: #ccc;">扣除額及免稅額合計：</span>
-                <span style="font-weight: bold; color: #ffbc4b;">- {total_deductions_all:,.0f} 元</span>
-            </div>
-            <div style="display: flex; justify-content: space-between; border-bottom: 1px solid #444; padding-bottom: 8px; margin-bottom: 8px;">
-                <span style="color: #ccc;">基本生活費差額：</span>
-                <span style="font-weight: bold; color: #ffbc4b;">- {basic_diff:,.0f} 元</span>
-            </div>
-            <div style="display: flex; justify-content: space-between; border-bottom: 1px solid #444; padding-bottom: 8px; margin-bottom: 15px;">
-                <span style="color: #4bc0ff; font-weight: bold; font-size: 18px;">➤ 綜合所得淨額：</span>
-                <span style="color: #4bc0ff; font-weight: bold; font-size: 18px;">{taxable_income:,.0f} 元</span>
-            </div>
-            
-            <div style="font-size: 14px; color: #888; margin-bottom: 10px;">
-                套用稅率 {int(tax_rate*100)}% 減去累進差額 {prog_diff:,.0f} = 應納稅額 {base_tax:,.0f} 元
-            </div>
-            <div style="display: flex; justify-content: space-between; border-bottom: 1px solid #444; padding-bottom: 8px; margin-bottom: 15px;">
-                <span style="color: #ccc;">股利 8.5% 可抵減稅額：</span>
-                <span style="font-weight: bold; color: #09ab3b;">- {div_credit:,.0f} 元</span>
-            </div>
-            
-            <div style="text-align: center; margin-top: 20px;">
-                <span style="color: #aaa; font-size: 16px;">最終實繳 / 退稅金額</span><br>
-                <span style="font-size: 38px; font-weight: bold; color: {'#ff4b4b' if final_tax_to_pay > 0 else '#09ab3b'};">
-                    {final_tax_to_pay:,.0f} <span style="font-size: 16px;">元</span>
-                </span>
-            </div>
-            <div style="text-align: center; color: #888; font-size: 12px; margin-top: 5px;">
-                (若為負數，表示國稅局將退稅給您)
-            </div>
-        </div>
-        """
-        st.markdown(calc_html, unsafe_allow_html=True)
