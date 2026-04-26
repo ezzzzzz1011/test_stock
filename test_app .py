@@ -453,9 +453,10 @@ with st.sidebar:
     if st.button("⭐ 我的關注清單", use_container_width=True): go_to("watchlist")
     if st.button("🚀 台股查詢", use_container_width=True): go_to("home")
     
-    # 👇 加入這一行 👇
-    if st.button("📝 報稅試算", use_container_width=True): go_to("tax_calc")
-    
+    # --- 👇 新增這一行，讓按鈕直接出現在側邊欄 ---
+    if st.button("📝 股利報稅", use_container_width=True): go_to("tax_calc")
+    # ------------------------------------------
+
     st.markdown("""<hr style="margin: 10px 0; border-color: #444;">""", unsafe_allow_html=True)
     
     if st.button("🚪 登出系統", use_container_width=True):
@@ -1130,3 +1131,56 @@ elif st.session_state.page == "market_index":
         with c9: 
             # 💡 移除強制數值
             with st.container(border=True): draw_compact_metric("美元/台幣", "TWD=X")
+
+# ==============================================================
+# 📝 頁面：股利報稅試算
+# ==============================================================
+elif st.session_state.page == "tax_calc":
+    st.title("📝 股利所得報稅試算")
+    st.info("本系統提供台灣股利所得稅試算（合併計稅 vs 分開計稅）。")
+
+    with st.container(border=True):
+        c1, c2 = st.columns(2)
+        with c1:
+            salary = st.number_input("薪資所得總額 (不含股利)", min_value=0, value=600000, step=10000)
+            dividend = st.number_input("全年股利所得總額", min_value=0, value=100000, step=1000)
+        with c2:
+            deduction = st.number_input("免稅額 + 標扣額 (單身預設為 21.6 萬)", min_value=0, value=216000)
+            salary_deduction = st.number_input("薪資特別扣除額 (上限 21.8 萬)", min_value=0, value=218000)
+
+    # 簡易計算邏輯
+    taxable_income = max(0, salary + dividend - deduction - salary_deduction)
+    
+    # 這裡可以根據稅率級距計算稅額（簡化版）
+    def calc_base_tax(income):
+        if income <= 560000: return income * 0.05
+        elif income <= 1260000: return income * 0.12 - 39200
+        elif income <= 2520000: return income * 0.20 - 140000
+        else: return income * 0.30 - 392000
+
+    # 方案一：合併計稅
+    method1_tax = calc_base_tax(taxable_income)
+    tax_credit = min(80000, dividend * 0.085) # 8.5% 抵減，上限 8 萬
+    final_m1 = method1_tax - tax_credit
+
+    # 方案二：分開計稅
+    taxable_no_div = max(0, salary - deduction - salary_deduction)
+    method2_tax = calc_base_tax(taxable_no_div) + (dividend * 0.28)
+
+    st.divider()
+    res_c1, res_c2 = st.columns(2)
+    
+    with res_c1:
+        st.markdown(f"### 方案一：合併計稅")
+        st.write(f"應納稅額: {method1_tax:,.0f}")
+        st.write(f"股利抵減額 (8.5%): -{tax_credit:,.0f}")
+        st.metric("估計繳納/退稅", f"{final_m1:,.0f}")
+
+    with res_c2:
+        st.markdown(f"### 方案二：分開計稅")
+        st.write(f"薪資部分稅額: {calc_base_tax(taxable_no_div):,.0f}")
+        st.write(f"股利部分稅額 (28%): {dividend * 0.28:,.0f}")
+        st.metric("估計繳納總額", f"{method2_tax:,.0f}")
+
+    best_method = "方案一：合併計稅" if final_m1 < method2_tax else "方案二：分開計稅"
+    st.success(f"💡 系統建議選用：**{best_method}**")
