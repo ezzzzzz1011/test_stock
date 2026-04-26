@@ -453,6 +453,9 @@ with st.sidebar:
     if st.button("⭐ 我的關注清單", use_container_width=True): go_to("watchlist")
     if st.button("🚀 台股查詢", use_container_width=True): go_to("home")
     
+    # 👇 加入這一行 👇
+    if st.button("📝 報稅試算", use_container_width=True): go_to("tax_calc")
+    
     st.markdown("""<hr style="margin: 10px 0; border-color: #444;">""", unsafe_allow_html=True)
     
     if st.button("🚪 登出系統", use_container_width=True):
