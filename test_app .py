@@ -1133,21 +1133,23 @@ elif st.session_state.page == "market_index":
             with st.container(border=True): draw_compact_metric("美元/台幣", "TWD=X")
 
 # ==============================================================
-# 📝 頁面：股利報稅與基本生活費試算 (114年度 / 115年申報 完美精準版)
+# 📝 頁面：股利報稅與基本生活費試算 (114年度 / 115年申報 最終完美版)
 # ==============================================================
 elif st.session_state.page == "tax_calc":
     if st.button("⬅️ 返回工具箱"): go_to("home")
     st.title("📝 股利報稅與綜合所得稅試算")
-    st.info("本系統採用 **114年度（115年5月申報）** 最新稅法公式，包含自動防呆與最新長照/租金扣除額規定。")
+    st.info("本系統採用 **114年度（115年5月申報）** 最新稅法公式，包含自動防呆、動態薪資人數與最新長照/租金扣除額規定。")
 
     # --- 1. 填寫區域 ---
     with st.expander("✏️ 展開填寫：所得與家庭扣除額資料", expanded=True):
         st.markdown("#### 💼 第一部分：所得資料")
-        c_inc1, c_inc2 = st.columns(2)
+        c_inc1, c_inc2, c_inc3 = st.columns(3)
         with c_inc1:
-            salary = st.number_input("全年薪資所得總額", value=600000, step=10000)
+            salary = st.number_input("全家薪資所得總額", value=1600000, step=10000)
         with c_inc2:
-            div_total = st.number_input("全年股利及盈餘合計金額", value=100000, step=1000)
+            salary_earners = st.number_input("有薪資收入的【人數】", min_value=0, value=3, step=1)
+        with c_inc3:
+            div_total = st.number_input("全年股利及盈餘合計金額", value=0, step=1000)
             
         st.divider()
         st.markdown("#### 👨‍👩‍👧‍👦 第二部分：家庭與一般扣除額")
@@ -1156,7 +1158,7 @@ elif st.session_state.page == "tax_calc":
             marital_status = st.selectbox("婚姻狀態 (決定標準扣除額)", ["單身 (13.1萬)", "夫妻合併申報 (26.2萬)"])
             general_deduction = 131000 if "單身" in marital_status else 262000
         with c2:
-            dependents_normal = st.number_input("未滿70歲人數 (含本人/配偶/扶養)", min_value=1, value=1, step=1)
+            dependents_normal = st.number_input("未滿70歲人數 (含本人/配偶/扶養)", min_value=1, value=4, step=1)
         with c3:
             dependents_70plus = st.number_input("滿70歲以上扶養人數", min_value=0, value=0, step=1)
             
@@ -1168,7 +1170,7 @@ elif st.session_state.page == "tax_calc":
             saving_deduction = st.number_input("儲蓄投資金額 (上限27萬)", value=0, step=1000)
             disability_count = st.number_input("身心障礙【人數】 (每人21.8萬)", min_value=0, value=0, step=1)
         with c5:
-            edu_count = st.number_input("教育學費【人數】 (每人2.5萬)", min_value=0, value=0, step=1)
+            edu_count = st.number_input("教育學費【人數】 (每人2.5萬)", min_value=0, value=2, step=1)
             preschool_count = st.number_input("幼兒學前【人數】 (第1名12萬/第2名起13.5萬)", min_value=0, value=0, step=1)
         with c6:
             ltc_count = st.number_input("長期照顧【人數】 (每人18萬)", min_value=0, value=0, step=1)
@@ -1188,8 +1190,9 @@ elif st.session_state.page == "tax_calc":
     else:
         preschool_deduction = 120000 + (preschool_count - 1) * 135000
 
-    # 【自動防呆】薪資特別扣除額：只能扣除「實際薪資」與「21.8萬」兩者取其低
-    salary_deduction = min(salary, 218000 * (1 if "單身" in marital_status else 2)) 
+    # 【自動防呆】薪資特別扣除額：用「有領薪水的人數」去乘 21.8萬，再與實際總薪資取低值
+    salary_deduction_limit = 218000 * salary_earners
+    salary_deduction = min(salary, salary_deduction_limit) 
     
     # 總人數與免稅額
     total_people = dependents_normal + dependents_70plus
