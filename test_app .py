@@ -1112,24 +1112,22 @@ elif st.session_state.page == "market_index":
 
         c4, c5, c6 = st.columns(3)
         with c4: 
-            # 💡 移除強制數值，讓它抓取真實 API 數據
             with st.container(border=True): draw_compact_metric("費城半導體", "^SOX")
         with c5: 
-            # 💡 移除強制數值，讓它抓取真實 API 數據
             with st.container(border=True): draw_compact_metric("美10年債", "^TNX")
         with c6: 
-            # 🚨 只有台股加權保留週末強制校正
-            with st.container(border=True): draw_compact_metric("台股加權", "^TWII", (36804.34, -327.68, -0.88))
+            # 💡 移除強制校正數值，恢復即時抓取！
+            with st.container(border=True): draw_compact_metric("台股加權", "^TWII")
 
         c7, c8, c9 = st.columns(3)
         with c7: 
-            # 🚨 只有台指期保留週末強制校正
-            with st.container(border=True): draw_compact_metric("台指期 / 近全", "WTX=F", (37742, 664, 1.79))
+            # 💡 移除強制校正數值，恢復即時抓取！
+            # 注意：台指期在 yfinance 的代碼有時會變動，若 WTX=F 抓不到，可嘗試改為 TWF=F
+            with st.container(border=True): draw_compact_metric("台指期 / 近全", "WTX=F")
         with c8: 
-            # 🚨 只有原油期貨保留週末強制校正
-            with st.container(border=True): draw_compact_metric("原油期貨", "CL=F", (83.85, -10.84, -11.45))
+            # 💡 移除強制校正數值，恢復即時抓取！
+            with st.container(border=True): draw_compact_metric("原油期貨", "CL=F")
         with c9: 
-            # 💡 移除強制數值
             with st.container(border=True): draw_compact_metric("美元/台幣", "TWD=X")
 
 # ==============================================================
