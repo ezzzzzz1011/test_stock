@@ -1208,25 +1208,39 @@ elif st.session_state.page == "tax_calc":
         st.markdown("### 📊 114年度綜合所得稅速算級距表")
         st.caption("根據您輸入的資料，系統會自動對應下表計算：")
         
-        # 繪製你上傳的圖片表格
-        bracket_html = """
-        <table style="width: 100%; text-align: center; border-collapse: collapse; font-family: '微軟正黑體', sans-serif;">
-            <tr style="background-color: #4b4b57; color: white;">
-                <th style="padding: 12px; border: 1px solid #ddd;">所得淨額</th>
-                <th style="padding: 12px; border: 1px solid #ddd;">稅率</th>
-                <th style="padding: 12px; border: 1px solid #ddd;">累進差額</th>
-            </tr>
-            <tr><td style="padding: 10px; border: 1px solid #ddd;">0 ~ 590,000</td><td style="border: 1px solid #ddd;">5%</td><td style="border: 1px solid #ddd;">0</td></tr>
-            <tr style="background-color: #f9f9f9;"><td style="padding: 10px; border: 1px solid #ddd;">590,001 ~ 1,330,000</td><td style="border: 1px solid #ddd;">12%</td><td style="border: 1px solid #ddd;">41,300</td></tr>
-            <tr><td style="padding: 10px; border: 1px solid #ddd;">1,330,001 ~ 2,660,000</td><td style="border: 1px solid #ddd;">20%</td><td style="border: 1px solid #ddd;">147,700</td></tr>
-            <tr style="background-color: #f9f9f9;"><td style="padding: 10px; border: 1px solid #ddd;">2,660,001 ~ 4,980,000</td><td style="border: 1px solid #ddd;">30%</td><td style="border: 1px solid #ddd;">413,700</td></tr>
-            <tr><td style="padding: 10px; border: 1px solid #ddd;">4,980,001 以上</td><td style="border: 1px solid #ddd;">40%</td><td style="border: 1px solid #ddd;">911,700</td></tr>
-        </table>
-        """
-        st.markdown(bracket_html, unsafe_allow_html=True)
+        # 改用 Pandas DataFrame 搭配 st.table，完美適應深色/淺色主題
+        import pandas as pd
+        tax_table_data = pd.DataFrame({
+            "所得淨額": ["0 ~ 590,000", "590,001 ~ 1,330,000", "1,330,001 ~ 2,660,000", "2,660,001 ~ 4,980,000", "4,980,001 以上"],
+            "稅率": ["5%", "12%", "20%", "30%", "40%"],
+            "累進差額": ["0", "41,300", "147,700", "413,700", "911,700"]
+        })
+        st.table(tax_table_data)
         
     with col_result:
         st.markdown("### 🧾 一年要繳多少稅？")
+        
+        # 改用 Streamlit 原生容器與 Markdown，避免 HTML 縮排變成程式碼區塊
+        with st.container(border=True):
+            st.markdown(f"**綜合所得總額：** <span style='float:right;'>{total_income:,.0f} 元</span>", unsafe_allow_html=True)
+            st.markdown(f"**扣除額及免稅額合計：** <span style='float:right; color:#ffbc4b;'>- {total_deductions_all:,.0f} 元</span>", unsafe_allow_html=True)
+            st.markdown(f"**基本生活費差額：** <span style='float:right; color:#ffbc4b;'>- {basic_diff:,.0f} 元</span>", unsafe_allow_html=True)
+            
+            st.markdown("---")
+            st.markdown(f"<h4 style='color:#4bc0ff; margin-top: 0;'>➤ 綜合所得淨額： <span style='float:right;'>{taxable_income:,.0f} 元</span></h4>", unsafe_allow_html=True)
+            
+            st.caption(f"套用稅率 {int(tax_rate*100)}% 減去累進差額 {prog_diff:,.0f} = 應納稅額 {base_tax:,.0f} 元")
+            
+            st.markdown(f"**股利 8.5% 可抵減稅額：** <span style='float:right; color:#09ab3b;'>- {div_credit:,.0f} 元</span>", unsafe_allow_html=True)
+            
+            st.markdown("---")
+            final_color = "#ff4b4b" if final_tax_to_pay > 0 else "#09ab3b"
+            
+            # 使用置中的排版顯示最終金額
+            st.markdown("<div style='text-align: center; color: #aaa; font-size: 16px;'>最終實繳 / 退稅金額</div>", unsafe_allow_html=True)
+            st.markdown(f"<div style='text-align: center; font-size: 38px; font-weight: bold; color: {final_color};'>{final_tax_to_pay:,.0f} <span style='font-size: 16px;'>元</span></div>", unsafe_allow_html=True)
+            st.markdown("<div style='text-align: center; color: #888; font-size: 13px;'>(若為負數，表示國稅局將退稅給您)</div>", unsafe_allow_html=True)
+        
         
         # 顯示計算過程與結果
         calc_html = f"""
