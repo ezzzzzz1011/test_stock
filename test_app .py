@@ -1133,11 +1133,11 @@ elif st.session_state.page == "market_index":
             with st.container(border=True): draw_compact_metric("美元/台幣", "TWD=X")
 
 # ==============================================================
-# 📝 頁面：股利報稅試算
+# 📝 頁面：股利報稅試算 (套用 114 年度最新稅率級距)
 # ==============================================================
 elif st.session_state.page == "tax_calc":
     st.title("📝 股利所得報稅試算")
-    st.info("本系統提供台灣股利所得稅試算（合併計稅 vs 分開計稅）。")
+    st.info("本系統已套用 **114年度（2026年申報）** 最新綜合所得稅級距與免稅額度進行試算。")
 
     with st.container(border=True):
         c1, c2 = st.columns(2)
@@ -1145,25 +1145,33 @@ elif st.session_state.page == "tax_calc":
             salary = st.number_input("薪資所得總額 (不含股利)", min_value=0, value=600000, step=10000)
             dividend = st.number_input("全年股利所得總額", min_value=0, value=100000, step=1000)
         with c2:
-            deduction = st.number_input("免稅額 + 標扣額 (單身預設為 21.6 萬)", min_value=0, value=216000)
-            salary_deduction = st.number_input("薪資特別扣除額 (上限 21.8 萬)", min_value=0, value=218000)
+            # 114年單身預設：免稅額 9.7萬 + 標扣額 13.1萬 = 22.8萬
+            deduction = st.number_input("免稅額 + 標準扣除額", min_value=0, value=228000, step=1000)
+            # 薪資特別扣除額最高 21.8 萬
+            salary_deduction = st.number_input("薪資特別扣除額 (上限 21.8 萬)", min_value=0, value=218000, step=1000)
 
-    # 簡易計算邏輯
+    # 簡易計算邏輯 (綜合所得淨額)
     taxable_income = max(0, salary + dividend - deduction - salary_deduction)
     
-    # 這裡可以根據稅率級距計算稅額（簡化版）
+    # 套用 114 年度綜合所得稅速算公式
     def calc_base_tax(income):
-        if income <= 560000: return income * 0.05
-        elif income <= 1260000: return income * 0.12 - 39200
-        elif income <= 2520000: return income * 0.20 - 140000
-        else: return income * 0.30 - 392000
+        if income <= 590000: 
+            return income * 0.05
+        elif income <= 1330000: 
+            return income * 0.12 - 41300
+        elif income <= 2660000: 
+            return income * 0.20 - 147700
+        elif income <= 4980000: 
+            return income * 0.30 - 413700
+        else: 
+            return income * 0.40 - 911700
 
-    # 方案一：合併計稅
+    # 方案一：合併計稅 (股利併入綜合所得)
     method1_tax = calc_base_tax(taxable_income)
-    tax_credit = min(80000, dividend * 0.085) # 8.5% 抵減，上限 8 萬
+    tax_credit = min(80000, dividend * 0.085) # 8.5% 可抵減稅額，上限 8 萬
     final_m1 = method1_tax - tax_credit
 
-    # 方案二：分開計稅
+    # 方案二：分開計稅 (薪資與股利分開算)
     taxable_no_div = max(0, salary - deduction - salary_deduction)
     method2_tax = calc_base_tax(taxable_no_div) + (dividend * 0.28)
 
@@ -1172,15 +1180,18 @@ elif st.session_state.page == "tax_calc":
     
     with res_c1:
         st.markdown(f"### 方案一：合併計稅")
-        st.write(f"應納稅額: {method1_tax:,.0f}")
+        st.write(f"所得淨額: {taxable_income:,.0f}")
+        st.write(f"初步應納稅額: {method1_tax:,.0f}")
         st.write(f"股利抵減額 (8.5%): -{tax_credit:,.0f}")
-        st.metric("估計繳納/退稅", f"{final_m1:,.0f}")
+        st.metric("估計繳納 (負數為退稅)", f"{final_m1:,.0f}")
 
     with res_c2:
         st.markdown(f"### 方案二：分開計稅")
+        st.write(f"不含股利之所得淨額: {taxable_no_div:,.0f}")
         st.write(f"薪資部分稅額: {calc_base_tax(taxable_no_div):,.0f}")
         st.write(f"股利部分稅額 (28%): {dividend * 0.28:,.0f}")
         st.metric("估計繳納總額", f"{method2_tax:,.0f}")
 
     best_method = "方案一：合併計稅" if final_m1 < method2_tax else "方案二：分開計稅"
-    st.success(f"💡 系統建議選用：**{best_method}**")
+    best_diff = abs(final_m1 - method2_tax)
+    st.success(f"💡 系統建議選用：**{best_method}** (可省下約 **${best_diff:,.0f}** 元)")
