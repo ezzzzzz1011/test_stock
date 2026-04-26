@@ -1133,12 +1133,12 @@ elif st.session_state.page == "market_index":
             with st.container(border=True): draw_compact_metric("美元/台幣", "TWD=X")
 
 # ==============================================================
-# 📝 頁面：股利報稅與基本生活費試算 (114年度 / 115年申報 最終完美版)
+# 📝 頁面：股利報稅與基本生活費試算 (114年度 / 含列舉醫藥費自動比大小版)
 # ==============================================================
 elif st.session_state.page == "tax_calc":
     if st.button("⬅️ 返回工具箱"): go_to("home")
     st.title("📝 股利報稅與綜合所得稅試算")
-    st.info("本系統採用 **114年度（115年5月申報）** 最新稅法公式，包含自動防呆、動態薪資人數與最新長照/租金扣除額規定。")
+    st.info("本系統採用 **114年度（115年5月申報）** 最新稅法公式，支援「標準/列舉扣除額自動比大小」最優化試算。")
 
     # --- 1. 填寫區域 ---
     with st.expander("✏️ 展開填寫：所得與家庭扣除額資料", expanded=True):
@@ -1156,11 +1156,19 @@ elif st.session_state.page == "tax_calc":
         c1, c2, c3 = st.columns(3)
         with c1:
             marital_status = st.selectbox("婚姻狀態 (決定標準扣除額)", ["單身 (13.1萬)", "夫妻合併申報 (26.2萬)"])
-            general_deduction = 131000 if "單身" in marital_status else 262000
+            standard_deduction = 131000 if "單身" in marital_status else 262000
         with c2:
             dependents_normal = st.number_input("未滿70歲人數 (含本人/配偶/扶養)", min_value=1, value=4, step=1)
         with c3:
             dependents_70plus = st.number_input("滿70歲以上扶養人數", min_value=0, value=0, step=1)
+        
+        # 💡 新增：列舉扣除額 (醫藥費、保險費等)
+        c_item1, c_item2 = st.columns([1, 2])
+        with c_item1:
+            itemized_deduction = st.number_input("🏥 列舉扣除額總計 (如醫藥/保險/捐贈)", min_value=0, value=0, step=10000)
+        with c_item2:
+            st.write("") # 往下推一點對齊
+            st.info("💡 系統會自動比較「標準扣除額」與「列舉扣除額」，並自動採用金額 **較高** 的方案來節稅！")
             
         st.divider()
         st.markdown("#### 🌟 第三部分：特別扣除額")
@@ -1177,6 +1185,10 @@ elif st.session_state.page == "tax_calc":
             rent_deduction = st.number_input("房屋租金支出金額 (上限18萬)", value=0, step=1000)
 
     # --- 2. 後台精準計算邏輯 ---
+    # 【自動比大小】決定「一般扣除額」要用 標準 還是 列舉
+    general_deduction = max(standard_deduction, itemized_deduction)
+    deduction_type_str = "列舉" if itemized_deduction > standard_deduction else "標準"
+
     # 【自動計算】將人數轉換為扣除額總金額
     disability_deduction = disability_count * 218000
     edu_deduction = edu_count * 25000
@@ -1190,7 +1202,7 @@ elif st.session_state.page == "tax_calc":
     else:
         preschool_deduction = 120000 + (preschool_count - 1) * 135000
 
-    # 【自動防呆】薪資特別扣除額：用「有領薪水的人數」去乘 21.8萬，再與實際總薪資取低值
+    # 【自動防呆】薪資特別扣除額
     salary_deduction_limit = 218000 * salary_earners
     salary_deduction = min(salary, salary_deduction_limit) 
     
@@ -1249,14 +1261,14 @@ elif st.session_state.page == "tax_calc":
             <th>每人基本生活費</th><th class="operator">乘</th>
             <th>總申報人數</th><th class="operator">減</th>
             <th>全部免稅額</th><th class="operator">減</th>
-            <th>一般扣除額</th><th class="operator">減</th>
+            <th>一般扣除額<br><span style="font-size:12px; color:#c00;">(採用{deduction_type_str})</span></th><th class="operator">減</th>
             <th>儲蓄投資<br>特別扣除額</th><th class="operator">減</th>
         </tr>
         <tr>
             <td>{basic_expense_unit:,}</td><td class="operator">✕</td>
             <td>{total_people}</td><td class="operator">－</td>
             <td>{total_exemption:,}</td><td class="operator">－</td>
-            <td>{general_deduction:,}</td><td class="operator">－</td>
+            <td style="font-weight:bold; color:#0056b3;">{general_deduction:,}</td><td class="operator">－</td>
             <td>{saving_deduction:,}</td><td class="operator">－</td>
         </tr>
         <tr>
